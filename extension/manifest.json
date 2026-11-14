@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Lynch Digitance — Auto Refresh",
+  "version": "2.5.5",
+  "description": "Keep tabs live on a schedule: time windows, random intervals, Telegram alerts when a tab needs you, AI setup, optional sync.",
+  "permissions": ["tabs", "storage", "alarms", "scripting", "notifications"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Lynch Digitance — Auto Refresh",
+    "default_icon": { "128": "icons/icon128.png" }
+  },
+  "icons": { "128": "icons/icon128.png" },
+  "commands": {
+    "toggle-refresh": {
+      "suggested_key": { "default": "Ctrl+Shift+R" },
+      "description": "Start or stop auto refresh on the current tab"
+    },
+    "toggle-pause": {
+      "suggested_key": { "default": "Ctrl+Shift+P" },
+      "description": "Pause or resume auto refresh on the current tab"
+    }
+  }
+}

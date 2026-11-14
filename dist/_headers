@@ -1,0 +1,8 @@
+/lynch-digitance-auto-refresh.zip
+  Content-Type: application/zip
+  Content-Disposition: attachment; filename="lynch-digitance-auto-refresh.zip"
+
+/version.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-store, max-age=0

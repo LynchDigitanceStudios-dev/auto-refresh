@@ -1,0 +1,15 @@
+# secrets and private files: never upload these
+accounts-worker/ADMIN_KEY.txt
+accounts-worker/PEPPER.txt
+**/PRIVATE-SECRETS*
+**/*.tmp
+**/.dev.vars
+**/.env
+**/.env.*
+
+# local tooling and installs
+.wrangler/
+**/.wrangler/
+node_modules/
+**/node_modules/
+**/*.backup*

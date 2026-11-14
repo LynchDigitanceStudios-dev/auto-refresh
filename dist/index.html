@@ -1,0 +1,894 @@
+<!-- aha-release: 6 -->
+<!-- aha-build-id: bmsyyjxu25p81g9uo -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lynch Digitance Studios — Auto Refresh Extension</title>
+<meta name="description" content="Lynch Digitance Studios Auto Refresh — a premium Chrome extension that keeps any tab live on your schedule. Download free." />
+<link rel="icon" href="icon128.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* Lynch Digitance Studios — Auto Refresh landing page
+   Rebrand 2026-09-27: silver + copper, matching the LDS monogram used across
+   the rest of the Lynch Digitance product line (see LYNCH DIGITANCE AGENCY SITE).
+   Light theme 2026-10-23: warm cream surfaces, cocoa text, copper accents. No black
+   anywhere (he asked for it); text is deep cocoa, never #000. */
+:root{
+  color-scheme:light;
+  --bg:#fbf6ef; --bg2:#f4e9db; --card:#ffffff; --line:#e8d9c6; --line-strong:#d6c0a4;
+  --ink:#3a2a20; --mut:#6f5e52; --mut-faint:#9c8b7d;
+  /* --gold is the copper used for text and thin lines (4.7:1 on cream); the fills are the
+     lighter pair for buttons and badges, which carry dark cocoa text (--on-fill, 5.9:1) */
+  --gold:#b5521e; --gold2:#f3ab6b; --gold-deep:#8e3f12; --gold-dim:rgba(217,122,61,.14);
+  --fill1:#f3ab6b; --fill2:#e0813a; --on-fill:#3a1b08;
+  --rad:16px; --max:1180px;
+  --shadow:0 18px 50px rgba(120,70,30,.16);
+  --card-shadow:0 1px 2px rgba(120,70,30,.05),0 10px 28px rgba(120,70,30,.07);
+  --font-body:'Inter',ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; color:var(--ink);
+  background:radial-gradient(900px 480px at 85% -6%,rgba(224,129,58,.16),transparent 62%),var(--bg);
+  font:16px/1.65 var(--font-body);
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2{font-weight:800}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:.88em; background:var(--gold-dim); color:var(--gold-deep);
+  padding:.14em .45em; border-radius:6px;
+}
+
+/* ---------- nav ---------- */
+.nav{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between; gap:24px;
+  padding:14px clamp(16px,4vw,40px);
+  background:rgba(251,246,239,.84); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.nav__brand{display:flex;align-items:center;gap:12px}
+.nav__brand img{width:34px;height:34px}
+.nav__brand span{letter-spacing:.16em;font-size:13px;display:flex;gap:.45em}
+.nav__brand strong{font-weight:800}
+.nav__brand em{font-style:normal;color:var(--gold);font-weight:600}
+.nav__links{display:flex;align-items:center;gap:clamp(12px,2.4vw,28px);font-size:14px}
+.nav__links a{color:var(--mut);transition:color .18s}
+.nav__links a:hover{color:var(--ink)}
+.nav__cta{
+  color:var(--on-fill) !important; background:linear-gradient(135deg,var(--fill1),var(--fill2));
+  padding:9px 18px; border-radius:999px; font-weight:700;
+}
+.nav__cta:hover{filter:brightness(1.05)}
+
+/* ---------- shared ---------- */
+.eyebrow{
+  margin:0 0 14px; font-size:12px; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--gold); font-weight:700;
+}
+.center{text-align:center}
+.grad{
+  background:linear-gradient(100deg,#cf6a22,var(--gold) 55%,var(--gold-deep));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.section{max-width:var(--max);margin:0 auto;padding:clamp(64px,9vw,120px) clamp(16px,4vw,40px)}
+.section--alt{max-width:none;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.section--alt > *{max-width:var(--max);margin-left:auto;margin-right:auto}
+.section h2{font-size:clamp(26px,3.4vw,36px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em}
+.sub{color:var(--mut);margin:0 auto 48px;max-width:620px}
+.section h2.center + .grid{margin-top:52px}
+
+.btn{
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:15px 28px;border-radius:12px;font-weight:700;font-size:15px;
+  border:1px solid transparent;transition:transform .16s,filter .16s,border-color .16s,background .16s;
+}
+.btn:hover{transform:translateY(-2px)}
+.btn--gold{background:linear-gradient(135deg,var(--fill1),var(--fill2));color:var(--on-fill);box-shadow:0 12px 30px rgba(224,129,58,.28)}
+.btn--gold:hover{filter:brightness(1.05)}
+.btn--ghost{border-color:var(--line-strong);color:var(--ink);background:rgba(255,255,255,.55)}
+.btn--ghost:hover{border-color:var(--gold);background:#fff}
+.btn--sm{padding:10px 18px;font-size:14px;margin-top:14px}
+.btn--lg{padding:18px 40px;font-size:17px}
+.btn__meta{font-weight:500;font-size:12px;opacity:.75;margin-top:2px}
+
+/* ---------- hero ---------- */
+.hero{
+  max-width:var(--max);margin:0 auto;
+  padding:clamp(48px,7vw,96px) clamp(16px,4vw,40px);
+  display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(32px,5vw,72px);align-items:center;
+}
+.hero h1{font-size:clamp(32px,4.6vw,52px);line-height:1.06;letter-spacing:-.03em;margin:0 0 20px}
+.lede{color:var(--mut);font-size:17px;max-width:52ch;margin:0 0 32px}
+.hero__actions{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:28px}
+.trust{list-style:none;display:flex;flex-wrap:wrap;gap:22px;padding:0;margin:0;font-size:14px;color:var(--mut)}
+.trust li{display:flex;align-items:center;gap:8px}
+.trust li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold)}
+
+.hero__art{position:relative;display:flex;justify-content:center}
+.hero__logo{
+  position:absolute;top:-8%;right:-6%;width:min(320px,62%);aspect-ratio:1;
+  background:radial-gradient(circle at 50% 45%,rgba(224,129,58,.28),transparent 68%);
+  filter:blur(16px);pointer-events:none;
+}
+
+/* ---------- popup mockup ---------- */
+.mock{
+  position:relative;width:min(360px,100%);
+  background:var(--card);border:1px solid var(--line);border-radius:var(--rad);
+  overflow:hidden;box-shadow:var(--shadow);
+}
+.mock__bar{display:flex;align-items:center;gap:7px;padding:11px 14px;background:#f3e6d4;border-bottom:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot--r{background:#ff5f57}.dot--y{background:#febc2e}.dot--g{background:#28c840}
+.mock__label{margin-left:8px;font-size:11px;color:var(--mut)}
+.mock__body{padding:18px;display:grid;gap:14px}
+.mock__brand{display:flex;align-items:center;gap:12px}
+.mock__brand-icon{
+  width:38px;height:38px;border-radius:10px;flex:none;
+  background:linear-gradient(135deg,var(--fill1),#b5521e);
+}
+.mock__name{font-size:12px;letter-spacing:.14em;display:flex;gap:.4em}
+.mock__name em{font-style:normal;color:var(--gold)}
+.mock__sub{font-size:11px;color:var(--mut)}
+.mock__card{background:#fcf6ed;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.mock__lab{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+.mock__tab{font-weight:700;font-size:14px}
+.mock__url{font-size:12px;color:var(--mut)}
+.mock__presets{display:flex;flex-wrap:wrap;gap:6px}
+.mock__presets span{
+  font-size:12px;padding:5px 10px;border-radius:8px;
+  border:1px solid var(--line);color:var(--mut);
+}
+.mock__presets .on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-deep);font-weight:700}
+.mock__live{background:#fcf6ed;border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
+.mock__liverow{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:var(--mut);margin-bottom:12px}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--gold);animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(224,129,58,.55)}
+  70%{box-shadow:0 0 0 9px rgba(224,129,58,0)}
+  100%{box-shadow:0 0 0 0 rgba(224,129,58,0)}
+}
+.mock__timer-ring{position:relative;width:132px;height:132px;margin:0 auto}
+.ring{width:100%;height:100%;transform:rotate(-90deg)}
+.ring__bg{fill:none;stroke:#ecdcc7;stroke-width:5}
+.ring__fg{
+  fill:none;stroke:var(--gold);stroke-width:5;stroke-linecap:round;
+  stroke-dasharray:163.36;stroke-dashoffset:0;transition:stroke-dashoffset .95s linear;
+}
+.mock__timer-num{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;letter-spacing:-.02em}
+.mock__timer-unit{position:absolute;left:0;right:0;bottom:26px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+.mock__meta{margin-top:10px;font-size:12px;color:var(--mut)}
+.mock__meta span{color:var(--gold-deep);font-weight:700}
+
+/* ---------- features ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.feat{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--card-shadow);
+  padding:26px;transition:transform .18s,border-color .18s,box-shadow .18s;
+}
+.feat:hover{transform:translateY(-4px);border-color:rgba(181,82,30,.45);box-shadow:0 14px 34px rgba(120,70,30,.13)}
+.feat--hl{border-color:rgba(181,82,30,.5);background:linear-gradient(160deg,rgba(224,129,58,.12),var(--card) 62%)}
+.feat__ico{font-size:24px;margin-bottom:12px}
+.feat h3{margin:0 0 8px;font-size:17px}
+.feat p{margin:0;color:var(--mut);font-size:14.5px}
+
+/* ---------- steps ---------- */
+.steps{list-style:none;padding:0;display:grid;gap:16px;max-width:820px;margin:0 auto}
+.steps li{display:flex;gap:18px;background:var(--card);border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--card-shadow);padding:22px 24px}
+.steps__n{
+  flex:none;width:38px;height:38px;border-radius:50%;
+  display:grid;place-items:center;font-weight:800;color:var(--on-fill);
+  background:linear-gradient(135deg,var(--fill1),var(--fill2));
+}
+.steps h3{margin:4px 0 6px;font-size:17px}
+.steps p{margin:0;color:var(--mut);font-size:14.5px}
+
+/* ---------- update note ---------- */
+.note{
+  max-width:820px;margin:22px auto 0;padding:16px 20px;
+  background:rgba(224,129,58,.10);border:1px solid rgba(181,82,30,.35);
+  border-left-width:3px;border-radius:12px;
+  color:var(--mut);font-size:14.5px;
+}
+.note strong{color:var(--gold-deep)}
+
+/* ---------- changelog ---------- */
+.rel{max-width:820px;margin:0 auto;display:grid;gap:16px}
+.rel__item{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--card-shadow);padding:22px 26px}
+.rel__item--new{border-color:rgba(181,82,30,.5);background:linear-gradient(160deg,rgba(224,129,58,.11),var(--card) 62%)}
+.rel__head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.rel__ver{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.rel__tag{
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  color:var(--on-fill);background:linear-gradient(135deg,var(--fill1),var(--fill2));
+  padding:3px 9px;border-radius:999px;
+}
+.rel__list{margin:0;padding-left:20px;display:grid;gap:9px}
+.rel__list li{color:var(--mut);font-size:14.5px}
+.rel__list strong{color:var(--ink)}
+
+/* ---------- faq ---------- */
+.faq{max-width:820px;margin:0 auto;display:grid;gap:12px}
+.faq details{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--card-shadow);padding:0 20px}
+.faq details[open]{border-color:rgba(181,82,30,.45)}
+.faq summary{
+  cursor:pointer;list-style:none;padding:18px 28px 18px 0;position:relative;font-weight:600;
+}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";position:absolute;right:0;top:16px;color:var(--gold);font-size:20px;transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq p{margin:0 0 18px;color:var(--mut);font-size:14.5px}
+
+/* ---------- closer ---------- */
+.closer{
+  text-align:center;padding:clamp(64px,9vw,110px) 20px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(224,129,58,.22),transparent 64%),var(--bg2);
+  border-top:1px solid var(--line);
+}
+.closer__mark{
+  width:74px;height:74px;margin:0 auto 22px;border-radius:18px;
+  background:linear-gradient(135deg,var(--fill1),#b5521e);
+  box-shadow:0 12px 34px rgba(181,82,30,.28);
+}
+.closer h2{font-size:clamp(26px,3.6vw,38px);margin:0 0 10px;letter-spacing:-.02em}
+.closer p{color:var(--mut);margin:0 0 30px}
+
+/* ---------- footer ---------- */
+.foot{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;
+  max-width:var(--max);margin:0 auto;padding:30px clamp(16px,4vw,40px);
+  border-top:1px solid var(--line);font-size:13px;color:var(--mut);
+}
+.foot__brand{letter-spacing:.16em;color:var(--ink);display:flex;gap:.4em}
+.foot__brand em{font-style:normal;color:var(--gold)}
+.foot__brand span{color:var(--mut)}
+.foot__links{display:flex;gap:18px;justify-content:center}
+.foot__links a{color:var(--mut);transition:color .18s}
+.foot__links a:hover{color:var(--ink)}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr}
+  .hero__art{margin-top:12px}
+  .hero__logo{top:-10%;right:auto}
+}
+@media (max-width:640px){
+  .nav__links a:not(.nav__cta){display:none}
+  .btn{width:100%}
+  .steps li{flex-direction:column;gap:10px}
+  .foot{flex-direction:column;text-align:center}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+  html{scroll-behavior:auto}
+}
+
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <a class="nav__brand" href="#top">
+    <img src="data:image/png;base64,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" alt="Lynch Digitance Studios logo" />
+    <span><strong>LYNCH</strong><em>DIGITANCE</em></span>
+  </a>
+  <nav class="nav__links">
+    <a href="#install">Install</a>
+    <a href="#features">Features</a>
+    <a href="#update">Updates</a>
+    <a href="#faq">FAQ</a>
+    <a href="#community">Community</a>
+    <a class="nav__cta" href="./lynch-digitance-auto-refresh.zip" download>Download</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero__copy">
+      <p class="eyebrow">Chrome Extension · Manifest V3 · v2.5.5</p>
+      <h1>Your tab, always live.<br /><span class="grad">Auto Refresh by Lynch Digitance.</span></h1>
+      <p class="lede">
+        Pick a tab, pick an interval, hit start. Dashboards, ticket drops, live scores, build
+        pipelines, stock counters — Lynch Digitance keeps the page refreshing so you never sit
+        there hammering F5 again.
+      </p>
+      <div class="hero__actions">
+        <a class="btn btn--gold" href="./lynch-digitance-auto-refresh.zip" download>
+          Download extension
+          <span class="btn__meta">.zip · 63 KB</span>
+        </a>
+        <a class="btn btn--ghost" href="#install">How to install</a>
+      </div>
+      <ul class="trust">
+        <li>Free forever</li>
+        <li>No account needed</li>
+        <li>No page tracking</li>
+      </ul>
+    </div>
+
+    <div class="hero__art">
+      <div class="hero__logo" role="img" aria-label="Lynch Digitance Studios logo emblem in silver and copper"></div>
+
+      <!-- Live popup mockup -->
+      <div class="mock" aria-label="Preview of the extension popup">
+        <div class="mock__bar">
+          <span class="dot dot--r"></span><span class="dot dot--y"></span><span class="dot dot--g"></span>
+          <span class="mock__label">Lynch Digitance — Auto Refresh</span>
+        </div>
+        <div class="mock__body">
+          <div class="mock__brand">
+            <div class="mock__brand-icon" role="img" aria-label="Lynch Digitance Studios brand icon"></div>
+            <div>
+              <div class="mock__name"><strong>LYNCH</strong><em>DIGITANCE</em></div>
+              <div class="mock__sub">Auto Refresh · Studios</div>
+            </div>
+          </div>
+          <div class="mock__card">
+            <div class="mock__lab">Current tab</div>
+            <div class="mock__tab">Live Sales Dashboard</div>
+            <div class="mock__url">analytics.internal</div>
+          </div>
+          <div class="mock__card">
+            <div class="mock__lab">Refresh every</div>
+            <div class="mock__presets">
+              <span>5s</span><span>15s</span><span class="on">30s</span>
+              <span>1m</span><span>5m</span><span>15m</span>
+            </div>
+          </div>
+          <div class="mock__live">
+            <div class="mock__liverow"><i class="pulse"></i> Refreshing this tab</div>
+            <div class="mock__timer-ring">
+              <svg viewBox="0 0 60 60" class="ring" aria-hidden="true">
+                <circle class="ring__bg" cx="30" cy="30" r="26" />
+                <circle class="ring__fg" cx="30" cy="30" r="26" id="ringProgress" />
+              </svg>
+              <div class="mock__timer-num" id="mockCountdown">30</div>
+              <div class="mock__timer-unit">sec</div>
+            </div>
+            <div class="mock__meta"><span id="mockRefreshes">12</span> refreshes · every 30s</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="section">
+    <p class="eyebrow center">What it does</p>
+    <h2 class="center">Built for people who watch pages for a living</h2>
+    <div class="grid">
+      <article class="feat feat--hl">
+        <div class="feat__ico">⏱</div>
+        <h3>Live countdown timer</h3>
+        <p>A bold countdown ring shows exactly how long until the next refresh — not just a number, a visual timer that ticks down in real time. Plus a running total of how many refreshes have fired.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">📲</div>
+        <h3>Telegram alerts when it needs you</h3>
+        <p>Connect your own Telegram bot and get a message the moment a tab needs a human: a captcha, a “verify you’re human” wall, or a word you’re watching for. The message names the account, so you know which one. No more alerts for every small page change.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">⚡</div>
+        <h3>Any interval you want</h3>
+        <p>Six one-tap presets from 5 seconds to 15 minutes, plus a custom field in seconds, minutes, or hours.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">🗂</div>
+        <h3>Multiple tabs at once</h3>
+        <p>Refresh your dashboard every 30 seconds and a release page every 5 minutes. Each tab keeps its own timer, options, and schedule.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">🔨</div>
+        <h3>Hard refresh option</h3>
+        <p>Toggle on bypass-cache mode to force a true fresh load every cycle. Some dashboards serve stale data from cache — this makes sure you're always seeing the real thing.</p>
+      </article>
+      <article class="feat feat--hl">
+        <div class="feat__ico">📅</div>
+        <h3>Up to 7 time windows a day</h3>
+        <p>Set the exact hours a tab should be live — say <code>3am–5am</code>, <code>7am–12pm</code> and <code>2pm–7pm</code>. It refreshes inside each window, stops the second one ends, and starts itself again when the next one opens. Pick days of the week too.</p>
+      </article>
+      <article class="feat feat--hl">
+        <div class="feat__ico">🌎</div>
+        <h3>Its own US time zone</h3>
+        <p>The schedule runs on one fixed time zone — US Eastern by default, or Central, Mountain, Arizona, Pacific, Alaska or Hawaii — not your computer's clock. 3am Eastern means 3am Eastern wherever you are, daylight saving included.</p>
+      </article>
+      <article class="feat feat--hl">
+        <div class="feat__ico">🔄</div>
+        <h3>Sync across your computers</h3>
+        <p>Optional free account: log in once and your time windows, intervals and options follow you to every computer where Auto Refresh is installed. Change something on one and it appears on the others. Skip it and nothing ever leaves your browser.</p>
+      </article>
+      <article class="feat feat--hl">
+        <div class="feat__ico">✨</div>
+        <h3>Lynch AI can set it up for you</h3>
+        <p>A chat tab right inside the extension. Tell it what you want — "set it up for 3am to 5am and 7am to 12pm" — and it makes the change itself, no clicking required. Ask a question instead and it just answers. It never sees what page you're on.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">⌨️</div>
+        <h3>Keyboard shortcuts</h3>
+        <p>Press <code>Ctrl+Shift+R</code> to instantly start or stop auto-refresh on whatever tab you're on. Press <code>Ctrl+Shift+P</code> to pause or resume. No popup needed.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">⏸</div>
+        <h3>Per-tab pause</h3>
+        <p>Need to interact with a page manually? Hit pause — the timer holds without losing your settings. Resume when you're done and the countdown picks right back up.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">🔒</div>
+        <h3>Private by default</h3>
+        <p>No account needed, and nothing about the pages you refresh ever leaves your browser. Your settings stay in your browser unless you choose to log in to sync them. Once a day it checks for a new version and sends an anonymous install count (a random ID and the version number, nothing else), and both can be switched off in the popup. Otherwise it only goes online when you set something up or start it: “Check for updates”, chatting with Lynch AI, syncing after you log in, or sending alerts to your own Telegram bot.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">🎯</div>
+        <h3>Survives sleep</h3>
+        <p>Built on Chrome's alarms system, so timers re-arm themselves after the browser idles or restarts.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">📊</div>
+        <h3>Countdown on the icon</h3>
+        <p>The toolbar icon counts down the seconds to the next refresh — 300, 299, 298 — for whichever tab you’re on. Gold while refreshing, grey while waiting for the next window. Want it bigger? Switch on the on-page timer and it sits in the top-right corner of the page.</p>
+      </article>
+      <article class="feat feat--hl">
+        <div class="feat__ico">🎰</div>
+        <h3>Random interval ranges</h3>
+        <p>Give it a window instead of a number — <code>250s</code> to <code>300s</code> — and every single refresh waits a fresh random amount inside that range. A page seeing reloads at 271s, 288s, 254s looks nothing like a script on a fixed timer.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">🎲</div>
+        <h3>Random jitter</h3>
+        <p>Adds a ±10% random delay to each refresh cycle so perfectly-timed reloads don't trigger bot detection. Looks human, stays reliable.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">✋</div>
+        <h3>Pauses itself, then carries on</h3>
+        <p>When a tab needs a human it stops reloading, so a captcha isn’t reset while you solve it. The toolbar icon shows a red <code>!</code>, the popup says why, and a chime plays if you want one. Fix the page and it starts refreshing again by itself.</p>
+      </article>
+      <article class="feat feat--hl">
+        <div class="feat__ico">🖱️</div>
+        <h3>Acts human on the page</h3>
+        <p>Optional. After each refresh it moves the mouse along curved paths, scrolls a little and back, and now and then clicks empty space, never a link or a button. Every visit is different, so a tab looks lived in instead of reloading on a timer. Off by default.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">⏳</div>
+        <h3>Session timer</h3>
+        <p>See total elapsed time since you started auto-refreshing a tab, right alongside the refresh count. "Running for 3h 22m, 402 refreshes."</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section id="install" class="section section--alt">
+    <p class="eyebrow center">Install in about 60 seconds</p>
+    <h2 class="center">Load it into Chrome</h2>
+    <p class="center sub">Works in Chrome, Edge, Brave, Opera and any Chromium browser.</p>
+
+    <ol class="steps">
+      <li>
+        <span class="steps__n">1</span>
+        <div>
+          <h3>Download and unzip</h3>
+          <p>Grab <strong>lynch-digitance-auto-refresh.zip</strong> and unzip it. You'll get a folder with <code>manifest.json</code> inside.</p>
+          <a class="btn btn--gold btn--sm" href="./lynch-digitance-auto-refresh.zip" download>Download .zip</a>
+        </div>
+      </li>
+      <li>
+        <span class="steps__n">2</span>
+        <div>
+          <h3>Open the extensions page</h3>
+          <p>Type <code>chrome://extensions</code> in your address bar and press Enter.</p>
+        </div>
+      </li>
+      <li>
+        <span class="steps__n">3</span>
+        <div>
+          <h3>Turn on Developer mode</h3>
+          <p>Flip the <strong>Developer mode</strong> toggle in the top-right corner of that page.</p>
+        </div>
+      </li>
+      <li>
+        <span class="steps__n">4</span>
+        <div>
+          <h3>Load unpacked</h3>
+          <p>Click <strong>Load unpacked</strong>, then select the unzipped folder. The Lynch Digitance logo appears in your toolbar.</p>
+        </div>
+      </li>
+      <li>
+        <span class="steps__n">5</span>
+        <div>
+          <h3>Start refreshing</h3>
+          <p>Open any page, click the logo, choose an interval and hit <strong>Start auto refresh</strong>.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- UPDATES -->
+  <section id="update" class="section">
+    <p class="eyebrow center">Already installed?</p>
+    <h2 class="center">Updating takes about 10 seconds</h2>
+    <p class="center sub">
+      You never have to remove the extension. Overwrite the folder, hit reload, and every
+      interval and schedule you have saved stays exactly where it is.
+    </p>
+
+    <ol class="steps">
+      <li>
+        <span class="steps__n">1</span>
+        <div>
+          <h3>Unzip over your existing folder</h3>
+          <p>Download the new <strong>.zip</strong> and unzip it into the <em>same folder</em> you loaded last time (the one with <code>manifest.json</code> directly inside), replacing the old files when asked.</p>
+          <a class="btn btn--gold btn--sm" href="./lynch-digitance-auto-refresh.zip" download>Download latest</a>
+        </div>
+      </li>
+      <li>
+        <span class="steps__n">2</span>
+        <div>
+          <h3>Click reload on the card</h3>
+          <p>Open <code>chrome://extensions</code> and press the circular <strong>reload ↻</strong> icon on the Auto Refresh card. That is the whole update.</p>
+        </div>
+      </li>
+      <li>
+        <span class="steps__n">3</span>
+        <div>
+          <h3>Check the version</h3>
+          <p>The card should now read <strong>2.5.5</strong>. Your saved settings are already back in the popup.</p>
+        </div>
+      </li>
+    </ol>
+
+    <p class="note">
+      <strong>Keep the same folder.</strong> Chrome ties your saved settings to where the
+      extension lives. Unzipping to a new spot (like a second copy in Downloads) registers a
+      fresh extension with empty settings — and deleting and reinstalling wipes them for the
+      same reason. Overwriting in place is what keeps everything.
+    </p>
+  </section>
+
+  <!-- WHAT'S NEW -->
+  <section class="section section--alt">
+    <p class="eyebrow center">Changelog</p>
+    <h2 class="center">What's new</h2>
+
+    <div class="rel">
+      <article class="rel__item rel__item--new">
+        <div class="rel__head">
+          <span class="rel__ver">2.5.5</span>
+          <span class="rel__tag">Latest</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>It tells you when a new version is out.</strong> Once a day the extension looks for a newer version. If there is one you get a desktop notification and, if you connected your own Telegram bot, a message there too (once per version). Account holders can also get an update email, with an unsubscribe link in every one. A tick box in the popup turns the alert off.</li>
+          <li><strong>An anonymous install count, with an off switch.</strong> So the developer can count how many people use the extension, it now sends one request a day with a random install ID and the version number. Never your email, settings or pages. The tick box “Share an anonymous install count” in the popup switches it off. This replaces the old “no tracking at all” wording, which would no longer be accurate.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.5.4</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Carries on by itself.</strong> After a captcha or block, a paused tab no longer waits for you to press Resume. It still never reloads the page while it waits, so a captcha you are solving is safe, but it keeps an eye on the page, and a few seconds after the problem is gone it starts refreshing again. Resume still works any time.</li>
+          <li><strong>Every alert names the account.</strong> The name you type now reaches a tab that is already refreshing straight away (before, it only counted after pressing Save settings, so alerts could show the page title instead). Alerts also show the page address. With no name typed, it uses the last normal page title, not “Just a moment…”.</li>
+          <li><strong>One folder, not two.</strong> The download now unzips to a single folder with <code>manifest.json</code> right inside, instead of a folder inside a folder. To update, unzip into the folder you loaded before, the one that has <code>manifest.json</code> directly inside it.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.5.3</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Act human on the page.</strong> A new switch, off by default. After each refresh the extension moves the mouse along curved paths, scrolls a little and returns, and about every other visit clicks once on empty space (a second tick box turns clicks off). Every visit is different. It never clicks links, buttons, fields or menus, stops the moment you touch the page, and leaves captcha and block pages alone. It helps with idle timeouts and simple activity checks; it can’t beat real bot protection. The setting syncs with your account like the others, and Lynch AI can switch it on for you.</li>
+          <li><strong>Fixed:</strong> “Send test” and “Disconnect” were showing in the Telegram section even when no bot was connected. They now appear only once a bot is connected, and Disconnect no longer tells your account anything when there was no bot to disconnect.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.5.2</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Your Telegram bot now syncs.</strong> Connect it once while logged in and every computer on your account can send you “needs a human touch” alerts. Disconnect on one and the others drop it on their next sync. The connection is encrypted before it is stored on our server. It is not end-to-end encrypted, because the server has to hand it back to your other computers. Your account name and time zone still stay on each computer.</li>
+          <li>Already have a bot connected on a computer where you’re logged in? Update every computer to 2.5.2 and open the popup once: the first computer to sync saves its bot to the account, and the others pick it up.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.5.1</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Time zone no longer syncs.</strong> Each computer keeps its own time zone, just like its account name, so you can set them separately. Your time windows, interval and options still sync. If you upgrade one computer and not the other, update both so they agree.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.5.0</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Alerts only when it needs you.</strong> “Notify me when the page changes” is now “Alert me when it needs a human touch”. It speaks up for a captcha or “verify you’re human” wall, a block page, or a word you choose, not for every change on the page. If you used the old alert, it works differently now.</li>
+          <li><strong>Telegram alerts with the account name.</strong> Connect your own Telegram bot in a couple of minutes and the message says which account needs you, for example “Main needs a human touch”.</li>
+          <li><strong>Name your tabs.</strong> Type an account name per tab. Leave it empty and the page title is used.</li>
+          <li><strong>Pauses itself.</strong> A tab that needs a human stops reloading so you can fix it, shows a red “!” on the icon and says why in the popup. Press Resume when you’re done. You can turn the pausing off.</li>
+          <li><strong>Words you choose.</strong> Add up to ten words to watch for, such as “new message” or “action required”.</li>
+          <li><strong>Your token is guarded.</strong> The bot token is never shown again after you save it, and Lynch AI and the chat refuse to handle it. In 2.5.0 it stayed on one computer; since 2.5.2 it can also sync to your account, encrypted (see above).</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.4.0</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Optional account with settings sync.</strong> Open the new Account tab, sign up or log in, and your saved settings follow you to every computer where Auto Refresh is installed. Change something on one and it shows up on the others.</li>
+          <li><strong>Skip it and nothing changes.</strong> Without an account the extension stays offline, exactly as before.</li>
+          <li><strong>Your data stays small.</strong> An account holds your email, a scrambled copy of your password and your saved settings. Never the pages you refresh. You can delete the account yourself from the popup.</li>
+          <li><strong>Careful sign-in.</strong> Passwords are stored scrambled, and an account locks for 15 minutes after six wrong passwords. There is no password-reset email yet.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.3.2</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Find the studio.</strong> The popup and this page now link to the Lynch Digitance website and the Discord community, so there is somewhere to go for help and to see what else we build.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.3.1</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>New look.</strong> Refreshed to match the wider Lynch Digitance brand: silver and copper in place of the old gold, and the new LDS mark everywhere the old logo was.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.3.0</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Lynch AI can now make the change itself.</strong> Tell it "set it up for 3am to 5am and 7am to 12pm" or "add a window from 8pm to 10pm" and it does it right away — windows, interval, random range, time zone, options, even starting or stopping a tab — instead of walking you through the fields yourself.</li>
+          <li><strong>It always says what it changed.</strong> Every change gets a short confirmation under the reply, so you can see exactly what happened, not just take its word for it.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.2.0</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Up to seven time windows a day.</strong> Instead of one start and end time, set as many as seven — 3am to 5am, 7am to 12pm, 2pm to 7pm and so on. It stops the moment a window ends and picks itself back up when the next one opens.</li>
+          <li><strong>A fixed US time zone.</strong> Your schedule now follows its own clock — US Eastern by default, or any of six other US zones — instead of whatever your computer is set to. Daylight saving is handled.</li>
+          <li><strong>Live clock and status.</strong> The popup shows the time in your chosen zone and says either “Active now, until 5:00 AM” or when the next window opens.</li>
+          <li><strong>Sleeps between windows.</strong> Outside your hours it waits quietly for the next window instead of waking up every few seconds for nothing.</li>
+          <li><strong>The countdown lives on the icon.</strong> Instead of a tab count, the toolbar icon now counts down the seconds to the next refresh for the tab you’re on. Grey while it waits for the next window.</li>
+          <li><strong>Optional big on-page timer.</strong> Tick “Show big countdown on the page” for a large timer in the top-right corner. Off by default, because the website can see it — the icon badge can’t be seen by the site.</li>
+          <li><strong>Lynch AI inside the extension.</strong> A new chat tab answers setup questions using your real settings.</li>
+          <li><strong>Update check fixed.</strong> “Check for updates” now reaches this site. If you are on 2.1.0 and it failed before, it works again too.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.1.0</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Random interval ranges.</strong> Instead of one fixed number, give it a window — say 250 to 300 seconds — and every refresh waits a fresh random amount inside it. Far harder for a site to spot as automated than a metronome.</li>
+          <li><strong>The countdown is now in seconds, always.</strong> A five minute wait reads 300, 299, 298 instead of rounding to “5m”, so you can see exactly where you are.</li>
+          <li><strong>See the current wait.</strong> With a range on, the popup shows the length this cycle rolled — “284s of 250–300s”.</li>
+          <li><strong>Check for updates from the popup.</strong> A link at the bottom tells you whether you are on the newest build, with the version you have next to it.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.0.1</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>Schedules now save properly.</strong> Your chosen days and your start/end times are remembered when you close the popup — previously the times quietly reset to 9am–5pm every time.</li>
+          <li><strong>New “Save settings” button.</strong> Save whenever you like and get a clear confirmation. If a tab is already refreshing, your changes apply to it instantly — no stopping and starting.</li>
+          <li><strong>Settings save on their own too.</strong> Change anything and it is stored right away, so nothing is lost if you close the popup without pressing Save.</li>
+          <li><strong>Schedule survives being switched off.</strong> Turning “only on a schedule” off no longer throws away the days and times you picked.</li>
+          <li><strong>Overnight windows work.</strong> Ranges that cross midnight, like 9am to 7am, are handled correctly.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head"><span class="rel__ver">2.0.0</span></div>
+        <ul class="rel__list">
+          <li>First release: per-tab intervals, live countdown ring, change detection with desktop notification and chime, hard refresh, day and time scheduling, keyboard shortcuts, badge counter and random jitter.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="section">
+    <p class="eyebrow center">Questions</p>
+    <h2 class="center">Good to know</h2>
+    <div class="faq">
+      <details>
+        <summary>Why Developer mode instead of the Chrome Web Store?</summary>
+        <p>This is your own build, delivered directly to you. Loading unpacked is the standard way to run a private extension. If you ever want it listed publicly on the Chrome Web Store, that needs a one-time developer account with Google — just say the word and we can plan it.</p>
+      </details>
+      <details>
+        <summary>Can Lynch AI actually change my settings, or just explain them?</summary>
+        <p>It changes them. Tell it what you want — "set it up for 3am to 5am and 7am to 12pm", "add a window from 8pm to 10pm", "switch to Pacific time", "start refreshing this tab" — and it does it right there, no clicking required. It confirms exactly what it changed underneath its reply. Ask it a question instead ("how do time windows work?") and it just answers, nothing is touched.</p>
+      </details>
+      <details>
+        <summary>How do I know when there's a new version?</summary>
+        <p>Open the popup and click <strong>Check for updates</strong> at the bottom — it compares the version you're running against the latest one published here and tells you either way. Unpacked extensions can't auto-update themselves, so nothing is ever installed behind your back; the button just tells you when it's worth grabbing the new zip.</p>
+      </details>
+      <details>
+        <summary>How do I update without losing my settings?</summary>
+        <p>Unzip the new download over the same folder you loaded before, then click the reload ↻ icon on the extension's card at <code>chrome://extensions</code>. Your intervals and schedules are kept. Don't delete and reinstall — that clears them. There's a <a href="#update">step-by-step above</a>.</p>
+      </details>
+      <details>
+        <summary>Will it keep refreshing if I close the popup?</summary>
+        <p>Yes. The popup is just the control panel. Timers live in the extension's background worker, so you can close the popup and even switch tabs freely.</p>
+      </details>
+      <details>
+        <summary>Can I refresh faster than every 30 seconds?</summary>
+        <p>Yes. Chrome's alarm system has a 30-second floor, so anything shorter (like the 5s and 15s presets) is driven by a chained timer instead — 5 seconds really means 5 seconds.</p>
+      </details>
+      <details>
+        <summary>What time zone does the schedule follow?</summary>
+        <p>Its own, never your computer's. Pick one of seven US zones in the popup — Eastern is the default. The popup shows the live time in that zone, so you can see exactly what it's working from. Daylight saving changes are handled for you. If you use an account, the time zone stays on each computer and is not synced.</p>
+      </details>
+      <details>
+        <summary>What happens between my time windows?</summary>
+        <p>It sleeps. The countdown — in the popup and on the toolbar icon — switches to the seconds until the next window opens, shown in grey. When the window opens it refreshes straight away and carries on — you don't need to touch anything. A window can cross midnight, like 10pm to 2am.</p>
+      </details>
+      <details>
+        <summary>What counts as “needs a human touch”?</summary>
+        <p>Two things. First, the page is blocking or challenging you: a captcha or “verify you’re human” check, a “press and hold” wall, a “checking your browser” page, or a short access denied or too many requests page. Second, one of your own words appears on the page, like “new message” or “action required”. It reads text that is already on the page, inside the tab, after every refresh. That catches the usual walls, but it can occasionally miss an unusual one or flag a normal page. You can switch the blocked check off and rely on your own words.</p>
+      </details>
+      <details>
+        <summary>How do I connect Telegram?</summary>
+        <p>In Telegram, message @BotFather, send /newbot and copy the token it gives you. In the popup, tick “Alert me when it needs a human touch”, open the Telegram section and paste the token. Then send your new bot any message in Telegram (bots can’t message you first), press Detect chat ID, and press Save. A confirmation arrives in Telegram. It takes about two minutes.</p>
+      </details>
+      <details>
+        <summary>Is my Telegram bot token safe?</summary>
+        <p>If you’re not logged in, the token stays on that computer only. If you are logged in, the connection (bot token and chat ID) is also saved to your account so your other computers can alert you too. It is encrypted before it is stored, with a key kept apart from the database, so a copy of the database alone shows nothing readable. It is not end-to-end encrypted, because our server holds the key so it can hand the connection back to your own computers. The token is never shown again after you save it, Lynch AI can’t see it, and the chat refuses to send anything that looks like a bot token. Alerts go straight from your browser to Telegram. Disconnect removes it from the computer and from your account. Prefer it on one computer only? Don’t log in, or connect the bot on that computer while logged out.</p>
+      </details>
+      <details>
+        <summary>Why did my tab pause and show a red “!”?</summary>
+        <p>When a tab needs a human it pauses on purpose, because reloading a captcha would reset it while you’re solving it. The popup says why. Fix the page and it carries on by itself a few seconds after the problem is gone (you can also press Resume, or Ctrl+Shift+P, any time). If you’d rather it kept going, switch off “Pause this tab until it’s fixed”: it then alerts once and reminds you every 30 minutes.</p>
+      </details>
+      <details>
+        <summary>What does “Act human on the page” do, and can it beat bot protection?</summary>
+        <p>It is a switch in the popup, off by default. After each refresh, while the next one counts down, the extension plays a short visit inside the page: the mouse moves along curved, uneven paths, the page scrolls a little and returns to where it was, and about every other visit it clicks once on empty space. A second tick box turns the clicks off. It never clicks a link, button, field, image or menu, never while a dialog is open, and it stops the moment you touch the page yourself. It reads nothing from the page and sends nothing anywhere. What it helps with: sites that log you out when they see no activity, and simple activity checks. What it can’t do: beat real bot protection such as Cloudflare or captcha systems. Browsers mark events made by an extension as not coming from a real device, and those systems look at far more than the mouse. If a captcha or block page does appear, Auto Refresh leaves the page alone, pauses, and alerts you so you can handle it.</p>
+      </details>
+      <details>
+        <summary>Do I need an account?</summary>
+        <p>No. The account is optional and only exists to sync your settings between computers. Skip it and Auto Refresh works exactly as before, and nothing is sent to the account server.</p>
+      </details>
+      <details>
+        <summary>How does syncing work?</summary>
+        <p>Open the Account tab in the popup, sign up or log in, and your saved settings (interval, random range, time windows and options) are kept on your account. Change something on one computer and it is sent within a couple of seconds. Your other computers pick it up when you open the popup, when the browser starts, every 15 minutes, or when you press Sync now. Tabs that are already refreshing keep the settings they started with. Logging in on a new computer loads what is saved on your account. Your time zone and account name are not synced: every computer keeps its own, so you can set them separately. A Telegram bot you have connected does sync (stored encrypted), so every computer can alert you.</p>
+      </details>
+      <details>
+        <summary>What does an account store, and how do I delete it?</summary>
+        <p>Your email, a scrambled (salted and hashed) copy of your password, and your saved settings. Never the pages you refresh, their addresses or their contents. To delete it, open the Account tab, choose Delete my account and confirm with your password. The account and its stored settings are removed; the settings on your computer stay.</p>
+      </details>
+      <details>
+        <summary>I forgot my password. Can I reset it?</summary>
+        <p>Not yet. There is no reset email in this version, so a lost password can't be recovered. You can sign up again with a new account, and the settings on your computer are untouched. As a safeguard, six wrong passwords in a row lock an account for 15 minutes.</p>
+      </details>
+      <details>
+        <summary>Does it collect any of my data?</summary>
+        <p>Not by default. Your intervals and schedules are saved in Chrome's local storage on your own machine, and nothing about the pages you refresh is tracked. Once a day the extension checks for a new version and sends an anonymous install count (a random install ID and the version number, never your email, settings or pages) so the developer can count how many people use it; two tick boxes in the popup switch these off. Beyond that, the extension only goes online when you set something up or start it yourself: “Check for updates” downloads a small public file with the latest version number; a Lynch AI chat message is sent with a summary of your refresh settings so it can answer or make the change you asked for; if you choose to log in, your settings sync to your account (it stores your email, a scrambled copy of your password and your saved settings and, if you connected one, your Telegram bot connection, encrypted); and if you connect a Telegram bot, alerts go straight from your browser to Telegram and your own bot. The address and title of the page you're refreshing are never sent to us, and page contents are never sent anywhere. An alert shows your account name and the page's address (the site and path, never anything after a question mark). If you didn't type a name it uses the page's title. These go only to your own Telegram. Switch the two daily checks off and use none of those, and it never goes online.</p>
+      </details>
+      <details>
+        <summary>What happens when I close a watched tab?</summary>
+        <p>Its timer is removed automatically, so nothing is left running in the background.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- COMMUNITY -->
+  <section id="community" class="section">
+    <p class="eyebrow center">More from Lynch Digitance</p>
+    <h2 class="center">Come say hi</h2>
+    <p class="center sub">Auto Refresh is one of several free tools from Lynch Digitance Studios. See what else we make on our website, or join the Discord to ask questions, share your setups and see what we build next.</p>
+    <div class="cta-row">
+      <a class="btn btn--gold" href="https://www.lynchdigitancestudios.workers.dev/" target="_blank" rel="noopener">Visit our website</a>
+      <a class="btn btn--ghost" href="https://discord.gg/aGBWVQfZsj" target="_blank" rel="noopener">Join the Discord</a>
+    </div>
+  </section>
+
+  <!-- CLOSER -->
+  <section class="closer">
+    <div class="closer__mark" role="img" aria-label="Lynch Digitance Studios logo mark"></div>
+    <h2>Stop refreshing by hand.</h2>
+    <p>One download, one toggle, and your page stays live.</p>
+    <a class="btn btn--gold btn--lg" href="./lynch-digitance-auto-refresh.zip" download>Download Auto Refresh</a>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="foot__brand"><strong>LYNCH</strong><em>DIGITANCE</em> <span>STUDIOS</span></div>
+  <div class="foot__tag">Create • Capture • Elevate</div>
+  <div class="foot__links"><a href="https://www.lynchdigitancestudios.workers.dev/" target="_blank" rel="noopener">Website</a><a href="https://discord.gg/aGBWVQfZsj" target="_blank" rel="noopener">Discord</a></div>
+  <div class="foot__meta">Auto Refresh v2.5.5 · Manifest V3</div>
+</footer>
+
+<script>
+/* Lynch Digitance Studios — landing page interactions */
+(function () {
+  'use strict';
+
+  /* Animated countdown inside the popup mockup ------------------------- */
+  var num = document.getElementById('mockCountdown');
+  var ring = document.getElementById('ringProgress');
+  var hits = document.getElementById('mockRefreshes');
+  if (!num || !ring) return;
+
+  var TOTAL = 30;                 // matches the "30s" preset shown as active
+  var CIRC = 2 * Math.PI * 26;    // r=26 in the SVG
+  var left = TOTAL;
+  var count = hits ? parseInt(hits.textContent, 10) || 12 : 12;
+  var timer = null;
+
+  ring.style.strokeDasharray = CIRC.toFixed(2);
+
+  function paint() {
+    num.textContent = left;
+    ring.style.strokeDashoffset = (CIRC * (1 - left / TOTAL)).toFixed(2);
+  }
+
+  function tick() {
+    left -= 1;
+    if (left < 0) {
+      left = TOTAL;
+      count += 1;
+      if (hits) hits.textContent = count;
+      // snap the ring back without a visible rewind
+      ring.style.transition = 'none';
+      paint();
+      void ring.offsetWidth;
+      ring.style.transition = '';
+      return;
+    }
+    paint();
+  }
+
+  function start() {
+    if (timer === null) timer = setInterval(tick, 1000);
+  }
+  function stop() {
+    if (timer !== null) { clearInterval(timer); timer = null; }
+  }
+
+  paint();
+
+  var reduced = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+
+  // Only run while the tab is visible, so it never spins in the background.
+  document.addEventListener('visibilitychange', function () {
+    document.hidden ? stop() : start();
+  });
+  if (!document.hidden) start();
+})();
+
+</script>
+<script>/*aha-img-guard v2.1:user-relative-no-stock*/(function(){var API="https://skycastle.ai/api/img-search?q=";var bad=/images\.unsplash\.com|source\.unsplash\.com|picsum\.photos|loremflickr\.com|placekitten/;function tile(i){try{var d=document.createElement("div");d.style.cssText="width:100%;height:100%;min-height:120px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#e9dfd2,#cdb89a);color:#6b5d49;font:600 14px system-ui;text-align:center;padding:10px;box-sizing:border-box";d.textContent=i.getAttribute("alt")||"";if(i.parentNode)i.parentNode.replaceChild(d,i);}catch(e){}}function real(i){var q=(i.getAttribute("alt")||"").trim();if(!q){tile(i);return;}fetch(API+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(d){if(d&&d.url){i.onerror=function(){tile(i);};i.src=d.url;}else tile(i);}).catch(function(){tile(i);});}function userRel(sa){return!!sa&&!/^https?:\/\//i.test(sa)&&!/^\/\//.test(sa)&&!/^data:/i.test(sa)&&!/^blob:/i.test(sa);}function chk(i){if(i.__ag)return;try{if(i.closest&&i.closest("nav,footer"))return;if(i.closest&&i.closest("header")&&/\b(logo|brand|icon|wordmark)\b/i.test(i.getAttribute("alt")||""))return;}catch(e){}var s=(i.currentSrc||i.src||i.getAttribute("src")||"").trim();var sa=(i.getAttribute("src")||"").trim();var alt=(i.getAttribute("alt")||"").trim();if(bad.test(s)){i.__ag=1;real(i);return;}if(/^https?:\/\//.test(s)){i.__ag=1;i.addEventListener("error",function(){real(i);});return;}if(!sa){if(alt){i.__ag=1;real(i);}return;}i.__ag=1;var fail=function(){if(userRel(sa))tile(i);else real(i);};if(i.complete&&i.naturalWidth===0){fail();return;}i.addEventListener("error",fail);}function scan(){document.querySelectorAll("img").forEach(chk);}try{new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["src"]});}catch(e){}document.addEventListener("DOMContentLoaded",scan);window.addEventListener("load",function(){scan();setTimeout(scan,800);setTimeout(scan,2000);});})();</script>
+</body>
+</html>

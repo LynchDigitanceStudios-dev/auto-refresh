@@ -1,0 +1,34 @@
+{
+  // Optional accounts for the Auto Refresh extension: log in once, and your saved
+  // settings follow you to every other computer where the extension is installed.
+  // Deploys to https://autorefresh-accounts.lynchdigitancestudios.workers.dev
+  //
+  // Secrets (set with `wrangler secret put`, never written here):
+  //   PEPPER     - mixed into every password before hashing, so a leaked database
+  //                alone can't be brute-forced. LOSING IT LOCKS EVERYONE OUT.
+  //   ADMIN_KEY  - opens the owner dashboard at /admin (and /admin/users, /admin/stats).
+  "name": "autorefresh-accounts",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "preview_urls": false,
+
+  // The one email allowed to open the admin dashboard (/admin) with its normal account password.
+  "vars": { "ADMIN_EMAIL": "lynchdigitancestudios@gmail.com" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "autorefresh-accounts",
+      "database_id": "814a27f0-1e04-4b6b-b8a0-928c67cc9495"
+    }
+  ],
+
+  // Per-IP throttle on signup/login so nobody can hammer password guesses.
+  "ratelimits": [
+    {
+      "name": "AUTH_LIMITER",
+      "namespace_id": "1003",
+      "simple": { "limit": 10, "period": 60 }
+    }
+  ]
+}

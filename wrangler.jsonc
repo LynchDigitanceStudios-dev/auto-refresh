@@ -1,0 +1,9 @@
+{
+  // Auto Refresh landing page + zip download + version.json.
+  // Deploys the built dist/ folder to https://autorefresh.lynchdigitancestudios.workers.dev
+  // Run `python build.py` first so dist/ is current, then `wrangler deploy`.
+  "name": "autorefresh",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./dist" },
+  "preview_urls": false
+}

@@ -1,0 +1,1 @@
+Counts installs anonymously (switch-off option), tells you when a new version is out, and unzips to one folder.

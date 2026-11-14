@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+<div class="brand">
+  <img src="icons/icon128.png" alt="" class="brand__icon" />
+  <div>
+    <div class="brand__name"><strong>LYNCH</strong><em>DIGITANCE</em></div>
+    <div class="brand__sub">Auto Refresh · Studios</div>
+  </div>
+</div>
+
+<div class="tabs" role="tablist">
+  <button class="tabs__b on" data-view="main" role="tab">Refresh</button>
+  <button class="tabs__b" data-view="ai" role="tab">Lynch AI</button>
+  <button class="tabs__b" data-view="account" role="tab">Account</button>
+</div>
+
+<!-- ================= REFRESH VIEW ================= -->
+<div id="viewMain">
+
+<div class="card">
+  <div class="lab">Current tab</div>
+  <div class="tab" id="tabTitle">Loading…</div>
+  <div class="url" id="tabUrl"></div>
+</div>
+
+<div class="card">
+  <div class="lab">Refresh every</div>
+  <div class="presets" id="presets">
+    <button data-ms="5000">5s</button>
+    <button data-ms="15000">15s</button>
+    <button data-ms="30000" class="on">30s</button>
+    <button data-ms="60000">1m</button>
+    <button data-ms="300000">5m</button>
+    <button data-ms="900000">15m</button>
+  </div>
+  <div class="custom">
+    <input type="number" id="customVal" min="1" step="1" placeholder="Custom" />
+    <select id="customUnit">
+      <option value="1000">seconds</option>
+      <option value="60000">minutes</option>
+      <option value="3600000">hours</option>
+    </select>
+  </div>
+
+  <label class="opt opt--tight"><input type="checkbox" id="rangeOn" /> <span>Random range instead</span></label>
+  <div class="range" id="range" hidden>
+    <div class="range__row">
+      <input type="number" id="rangeMin" min="1" step="1" value="250" />
+      <span>to</span>
+      <input type="number" id="rangeMax" min="1" step="1" value="300" />
+      <span class="range__unit">sec</span>
+    </div>
+    <div class="range__hint" id="rangeHint">Each refresh waits a random 250–300s.</div>
+  </div>
+</div>
+
+<div class="card">
+  <label class="opt"><input type="checkbox" id="schedOn" /> <span>Only during set hours</span></label>
+  <div class="sched" id="sched" hidden>
+    <div class="tzrow">
+      <select id="tz" aria-label="Time zone"></select>
+      <div class="clock" id="clock">—</div>
+    </div>
+
+    <div class="lab lab--sp">Days <span class="lab__note">(none selected = every day)</span></div>
+    <div class="days" id="days">
+      <button data-d="1">M</button><button data-d="2">T</button><button data-d="3">W</button>
+      <button data-d="4">T</button><button data-d="5">F</button>
+      <button data-d="6">S</button><button data-d="0">S</button>
+    </div>
+
+    <div class="lab lab--sp">Time windows</div>
+    <div class="wins" id="wins"></div>
+    <div class="winbar">
+      <button id="addWin" class="linkbtn" type="button">+ Add time window</button>
+      <span id="winCount">1 of 7</span>
+    </div>
+
+    <div class="schedStatus" id="schedStatus"></div>
+  </div>
+</div>
+
+<div class="card">
+  <label class="opt"><input type="checkbox" id="notifyOnChange" /> <span>Alert me when it needs a human touch</span></label>
+  <div class="human" id="human" hidden>
+    <input type="text" id="label" maxlength="40" autocomplete="off" placeholder="Account name shown in every alert, e.g. Main" />
+    <label class="opt"><input type="checkbox" id="humanBlock" checked /> <span>Blocked or human check (captcha, access denied)</span></label>
+    <input type="text" id="humanWords" maxlength="300" autocomplete="off" placeholder="Words to watch for, separated by commas" />
+    <label class="opt"><input type="checkbox" id="pauseOnHuman" checked /> <span>Pause this tab until it's fixed</span></label>
+    <label class="opt"><input type="checkbox" id="sound" /> <span>Play a chime on this computer</span></label>
+
+    <div class="tg" id="tg">
+      <div class="lab">Telegram</div>
+      <div class="tg__status" id="tgStatus">Not connected</div>
+      <div id="tgSetup">
+        <p class="acct__fine">1. In Telegram, message @BotFather, send /newbot and copy the token it gives you. 2. Paste it below, then send your new bot any message. 3. Press Detect chat ID, then Save. If you are logged in, the connection is also saved to your account (encrypted) so your other computers can send alerts.</p>
+        <input type="password" id="tgToken" autocomplete="off" placeholder="Bot token" />
+        <input type="text" id="tgChat" autocomplete="off" placeholder="Chat ID (Detect fills this in)" />
+        <div class="acct__btns">
+          <button type="button" id="tgDetect" class="btn btn--ghost">Detect chat ID</button>
+          <button type="button" id="tgSave" class="btn btn--gold">Save</button>
+        </div>
+      </div>
+      <div id="tgDone" class="acct__btns" hidden>
+        <button type="button" id="tgTest" class="btn btn--ghost">Send test</button>
+        <button type="button" id="tgOff" class="btn btn--ghost btn--danger">Disconnect</button>
+      </div>
+      <div class="acct__msg" id="tgMsg" hidden></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <label class="opt"><input type="checkbox" id="hardRefresh" /> <span>Hard refresh (bypass cache)</span></label>
+  <label class="opt"><input type="checkbox" id="jitter" /> <span>Random ±10% jitter</span></label>
+  <label class="opt" title="Adds a countdown to the top-right of the page. The website can see it, so leave it off if that matters.">
+    <input type="checkbox" id="pageTimer" /> <span>Show big countdown on the page</span>
+  </label>
+  <div class="opt__note">The icon badge always counts down. The on-page timer is visible to the website.</div>
+  <label class="opt opt--tight" title="After each refresh the extension moves the mouse, scrolls a little and sometimes clicks empty space, so the page sees normal activity.">
+    <input type="checkbox" id="humanize" /> <span>Act human on the page</span>
+  </label>
+  <div class="opt-sub" id="humanActs" hidden>
+    <label class="opt"><input type="checkbox" id="humanClicks" checked /> <span>Include gentle clicks on empty space</span></label>
+  </div>
+  <div class="opt__note">Moves the mouse, scrolls a little and sometimes clicks empty space after each refresh. It helps with idle timers; it can't get past real bot protection.</div>
+</div>
+
+<div class="card" id="privacyCard">
+  <label class="opt"><input type="checkbox" id="updateAlerts" checked /> <span>Tell me when a new version is out</span></label>
+  <label class="opt"><input type="checkbox" id="usagePing" checked /> <span>Share an anonymous install count</span></label>
+  <div class="opt__note">Once a day the extension checks for a new version and, if this is on, sends a random install ID and the version number so the developer can count users. Never your email, settings or pages. The version alert goes to your desktop, and to your own Telegram bot if you connected one.</div>
+</div>
+
+<div class="live" id="live" hidden>
+  <div class="liverow"><i class="pulse" id="pulse"></i> <span id="liveLabel">Refreshing this tab</span></div>
+  <div class="ringwrap">
+    <svg viewBox="0 0 60 60" class="ring" aria-hidden="true">
+      <circle class="ring__bg" cx="30" cy="30" r="26" />
+      <circle class="ring__fg" cx="30" cy="30" r="26" id="ringProgress" />
+    </svg>
+    <div class="ringnum" id="countdown">30</div>
+  </div>
+  <div class="meta" id="ringCaption"><span id="count">0</span> refreshes · <span id="elapsed">0m</span> running</div>
+  <div class="meta meta--cycle" id="cycleMeta" hidden>this wait: <span id="cycle">—</span></div>
+  <div class="meta" id="humanHint" hidden>Fix it in the tab. It carries on by itself, or press Resume.</div>
+</div>
+
+<div class="actions">
+  <button id="primary" class="btn btn--gold">Start auto refresh</button>
+  <button id="pause" class="btn btn--ghost" hidden>Pause</button>
+  <button id="save" class="btn btn--ghost">Save settings</button>
+  <div class="saved" id="savedMsg" hidden>Settings saved</div>
+</div>
+
+<div class="ver">
+  <span>v<span id="verNum">2.5.5</span></span>
+  <button id="checkUpdate" class="linkbtn">Check for updates</button>
+</div>
+<div class="verMsg" id="verMsg" hidden></div>
+
+<div class="hint">Ctrl+Shift+R start/stop · Ctrl+Shift+P pause</div>
+
+<div class="links">
+  <a href="https://www.lynchdigitancestudios.workers.dev/" target="_blank" rel="noopener">Our website</a>
+  <span>·</span>
+  <a href="https://discord.gg/aGBWVQfZsj" target="_blank" rel="noopener">Join our Discord</a>
+</div>
+
+</div>
+
+<!-- ================= AI VIEW ================= -->
+<div id="viewAi" hidden>
+  <div class="ai__log" id="aiLog" aria-live="polite"></div>
+  <form class="ai__form" id="aiForm">
+    <textarea id="aiInput" rows="2" maxlength="1500"
+      placeholder="Ask about time windows, ranges, why it stopped…"></textarea>
+    <button class="btn btn--gold ai__send" id="aiSend" type="submit">Send</button>
+  </form>
+  <div class="ai__foot">
+    <span class="ai__note">It can see and change your refresh settings — windows, interval, options — never the page you're on.</span>
+    <button class="linkbtn" id="aiClear" type="button">Clear</button>
+  </div>
+</div>
+
+<!-- ================= ACCOUNT VIEW ================= -->
+<div id="viewAccount" hidden>
+  <div id="acctOut">
+    <div class="card">
+      <div class="lab">Sync your settings</div>
+      <p class="acct__lede">Optional. Log in to keep the same settings on every computer where Auto Refresh is installed. Skip it and nothing is sent to the account server.</p>
+      <div class="acct__modes">
+        <button type="button" id="modeLogin" class="on">Log in</button>
+        <button type="button" id="modeSignup">Sign up</button>
+      </div>
+      <form id="acctForm" novalidate>
+        <input type="email" id="acctEmail" autocomplete="email" placeholder="Email" />
+        <input type="password" id="acctPass" autocomplete="current-password" placeholder="Password" />
+        <button type="submit" id="acctSubmit" class="btn btn--gold">Log in</button>
+      </form>
+    </div>
+    <p class="acct__fine">Logging in loads the settings saved on your account. We store your email, a scrambled copy of your password, your saved settings (intervals, time windows, options) and, if you connect one, your Telegram bot (encrypted). Each computer keeps its own time zone and account name. Never the pages you refresh.</p>
+  </div>
+
+  <div id="acctIn" hidden>
+    <div class="card">
+      <div class="lab">Signed in</div>
+      <div class="acct__email" id="acctWho"></div>
+      <div class="acct__sync" id="acctSync">Not synced yet</div>
+      <div class="acct__fine">Time zone and account name stay on each computer. Your Telegram bot syncs, stored encrypted on our server.</div>
+      <div class="acct__btns">
+        <button type="button" id="acctSyncNow" class="btn btn--gold">Sync now</button>
+        <button type="button" id="acctLogout" class="btn btn--ghost">Log out</button>
+      </div>
+    </div>
+    <div class="card">
+      <button type="button" id="acctDelToggle" class="linkbtn">Delete my account</button>
+      <div id="acctDel" hidden>
+        <p class="acct__fine">This permanently deletes your account and the settings stored for it. Settings on this computer stay.</p>
+        <input type="password" id="acctDelPass" autocomplete="current-password" placeholder="Confirm with your password" />
+        <button type="button" id="acctDelGo" class="btn btn--ghost btn--danger">Delete permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="acct__msg" id="acctMsg" hidden></div>
+</div>
+
+<script src="schedule.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

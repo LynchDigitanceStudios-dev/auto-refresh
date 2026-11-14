@@ -1,0 +1,11 @@
+{
+  // Keeps the OLD address alive: https://auto-refresh.lynchdigitancestudios.workers.dev
+  //
+  // Version 2.1.0 of the extension was built with this hyphenated address baked
+  // into its "Check for updates" button. The site moved to "autorefresh"
+  // (no hyphen), so without this worker every 2.1.0 install would fail to
+  // find updates forever. This forwards everything to the new address.
+  "name": "auto-refresh",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01"
+}

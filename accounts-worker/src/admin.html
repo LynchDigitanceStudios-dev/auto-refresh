@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Auto Refresh Admin</title>
+<style>
+  :root{
+    --bg:#fbf6ef; --bg2:#f4e9db; --card:#ffffff; --line:#e8d9c6; --ink:#3a2a20; --mut:#6f5e52;
+    --gold:#b5521e; --fill1:#f3ab6b; --fill2:#e0813a; --on-fill:#3a1b08; --good:#2f7d4f; --warn:#b5521e;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,ui-sans-serif,system-ui,"Segoe UI",Roboto,Arial,sans-serif}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px clamp(16px,4vw,36px);border-bottom:1px solid var(--line);background:rgba(251,246,239,.9);position:sticky;top:0;backdrop-filter:blur(10px);z-index:5}
+  header h1{margin:0;font-size:16px;letter-spacing:.14em;text-transform:uppercase}
+  header h1 em{font-style:normal;color:var(--gold)}
+  .btn{font:inherit;font-weight:700;font-size:13.5px;padding:9px 16px;border-radius:10px;border:1px solid #d6c0a4;background:#fff;color:var(--ink);cursor:pointer}
+  .btn:hover{border-color:var(--gold)}
+  .btn--go{background:linear-gradient(135deg,var(--fill1),var(--fill2));color:var(--on-fill);border-color:transparent}
+  main{max-width:1280px;margin:0 auto;padding:clamp(16px,3vw,32px)}
+  .login{max-width:380px;margin:12vh auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;box-shadow:0 10px 28px rgba(120,70,30,.08)}
+  .login h2{margin:0 0 6px;font-size:20px}
+  .login p{margin:0 0 16px;color:var(--mut);font-size:14px}
+  input[type=password],input[type=email],input[type=search]{width:100%;font:inherit;padding:11px 12px;border-radius:10px;border:1px solid #d6c0a4;background:#fff;color:var(--ink)}
+  input:focus{outline:2px solid var(--fill2);outline-offset:1px}
+  .err{color:#b3261e;font-size:13.5px;margin:10px 0 0;min-height:1.2em}
+  textarea,input[type=text]{width:100%;font:inherit;padding:11px 12px;border-radius:10px;border:1px solid #d6c0a4;background:#fff;color:var(--ink);margin-bottom:10px}
+  textarea{resize:vertical;min-height:120px}
+  details{margin-top:12px} summary{cursor:pointer;color:var(--gold);font-weight:700}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .kpi b{display:block;font-size:28px;line-height:1.1;letter-spacing:-.02em}
+  .kpi span{color:var(--mut);font-size:12.5px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:16px}
+  .panel h3{margin:0 0 10px;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:96px}
+  .bars i{flex:1;background:linear-gradient(var(--fill1),var(--fill2));border-radius:3px 3px 0 0;min-height:2px;position:relative}
+  .bars i.zero{background:var(--bg2)}
+  .axis{display:flex;justify-content:space-between;color:var(--mut);font-size:12px;margin-top:6px}
+  .bar-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .bar-tools input{max-width:320px}
+  .wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--card)}
+  th,td{padding:10px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+  th{background:var(--bg2);cursor:pointer;user-select:none;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);position:sticky;top:0}
+  th.on{color:var(--gold)}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover td{background:#fdf9f3}
+  .btn--del{padding:5px 11px;font-size:12.5px;color:#b3261e;border-color:#e3b9b4}
+  .btn--del:hover{background:#fdf0ee;border-color:#b3261e}
+  .yes{color:var(--good);font-weight:700} .no{color:#b9a998}
+  .muted{color:var(--mut)}
+  .foot{color:var(--mut);font-size:12.5px;margin-top:12px}
+  .note{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:16px;color:var(--mut);font-size:13.5px}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<header>
+  <h1>Auto Refresh <em>Admin</em></h1>
+  <div id="tools" hidden>
+    <button class="btn" id="refresh" type="button">Refresh</button>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</header>
+
+<main>
+  <section class="login" id="login">
+    <h2>Sign in</h2>
+    <p>Use your Auto Refresh account (the same email and password as in the extension). This computer then stays signed in until you press Log out.</p>
+    <form id="form">
+      <input type="email" id="email" autocomplete="username" placeholder="Email" aria-label="Email" style="margin-bottom:10px">
+      <input type="password" id="pass" autocomplete="current-password" placeholder="Password" aria-label="Password">
+      <p class="err" id="err" role="alert"></p>
+      <button class="btn btn--go" id="go" type="submit" style="width:100%">Open dashboard</button>
+    </form>
+  </section>
+
+  <section id="dash" hidden>
+    <div class="kpis" id="kpis"></div>
+    <div class="panel">
+      <h3>New sign-ups, last 30 days</h3>
+      <div class="bars" id="bars"></div>
+      <div class="axis"><span id="axL"></span><span id="axR">today</span></div>
+    </div>
+    <div class="panel" id="instPanel">
+      <h3>Installs (anonymous count, includes people without an account)</h3>
+      <div class="kpis" id="ikpis"></div>
+      <div class="bars" id="ibars" style="margin-top:14px"></div>
+      <div class="axis"><span id="iaxL"></span><span>today</span></div>
+      <p class="foot" id="vers"></p>
+      <details><summary>Recent installs</summary>
+        <div class="wrap" style="margin-top:10px"><table>
+          <thead><tr><th>Install</th><th>Version</th><th>First seen</th><th>Last seen</th><th>Days seen</th></tr></thead>
+          <tbody id="irows"></tbody>
+        </table></div>
+      </details>
+      <p class="foot">Counts copies of the extension version 2.5.5 or newer, which report once a day with a random ID and the version, nothing else. Older versions, and anyone who switched the count off, do not appear.</p>
+    </div>
+
+    <div class="panel" id="annPanel">
+      <h3>Send an update by email</h3>
+      <input type="text" id="aSubject" maxlength="150" placeholder="Subject, e.g. Auto Refresh 2.5.6 is out">
+      <textarea id="aBody" maxlength="6000" placeholder="Write the update. Tip: a line like [Download the update](https://your-link) becomes a button. Your logo, signature and a personal unsubscribe link are added for you."></textarea>
+      <div class="bar-tools" style="margin:0">
+        <span class="muted" id="aStatus">Goes to account holders who haven't unsubscribed.</span>
+        <div><button class="btn" id="aTest" type="button">Send me a test</button> <button class="btn btn--go" id="aSend" type="button">Send to everyone</button></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="bar-tools">
+        <input type="search" id="q" placeholder="Search by email" aria-label="Search by email">
+        <div><span class="muted" id="count"></span> <button class="btn" id="csv" type="button">Download CSV</button></div>
+      </div>
+      <div class="wrap"><table>
+        <thead><tr id="head"></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <p class="foot" id="stamp"></p>
+    </div>
+    <p class="note">The table lists people who <b>created an account</b>. The Installs panel above also counts people without one, but only copies of version 2.5.5 or newer that report in. Passwords, session tokens and Telegram bot tokens are never shown.</p>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var users = [], emailUsers = 0, sortBy = 'created', sortDir = -1;
+
+  var COLS = [
+    ['email', 'Email'], ['created', 'Joined'], ['lastLogin', 'Last login'], ['lastSync', 'Last sync'],
+    ['devices', 'Devices'], ['refresh', 'Refresh'], ['windows', 'Hours'], ['alerts', 'Alerts'],
+    ['telegram', 'Telegram'], ['humanize', 'Act human'], ['updates', 'Emails']
+  ];
+
+  function ago(ts) {
+    if (!ts) return '—';
+    var s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (s < 60) return 'just now';
+    var m = Math.round(s / 60); if (m < 60) return m + ' min ago';
+    var h = Math.round(m / 60); if (h < 48) return h + ' h ago';
+    var d = Math.round(h / 24); if (d < 60) return d + ' days ago';
+    return Math.round(d / 30) + ' months ago';
+  }
+  function full(ts) { return ts ? new Date(ts).toLocaleString() : ''; }
+  function interval(u) {
+    if (u.range) return 'random ' + Math.round(u.range[0] / 1000) + '–' + Math.round(u.range[1] / 1000) + 's';
+    if (!u.interval) return '—';
+    var s = Math.round(u.interval / 1000);
+    return s >= 3600 ? (s / 3600) + ' h' : s >= 60 ? Math.round(s / 60) + ' min' : s + ' s';
+  }
+  function windows(u) { return u.windows === null || u.windows === undefined ? 'all day' : u.windows + ' window' + (u.windows === 1 ? '' : 's'); }
+
+  function el(tag, text, cls) {
+    var e = document.createElement(tag);
+    if (text !== undefined) e.textContent = text; // textContent only: emails are user-supplied
+    if (cls) e.className = cls;
+    return e;
+  }
+  function yesno(v) { return el('span', v ? 'yes' : 'no', v ? 'yes' : 'no'); }
+
+  function sortVal(u, k) {
+    if (k === 'email') return u.email;
+    if (k === 'refresh') return u.range ? u.range[0] : (u.interval || 0);
+    if (k === 'windows') return u.windows === null || u.windows === undefined ? -1 : u.windows;
+    return typeof u[k] === 'boolean' ? (u[k] ? 1 : 0) : (u[k] || 0);
+  }
+
+  function renderHead() {
+    var tr = $('head'); tr.textContent = '';
+    COLS.forEach(function (c) {
+      var th = el('th', c[1] + (sortBy === c[0] ? (sortDir > 0 ? ' ▲' : ' ▼') : ''), sortBy === c[0] ? 'on' : '');
+      th.addEventListener('click', function () {
+        if (sortBy === c[0]) sortDir = -sortDir; else { sortBy = c[0]; sortDir = c[0] === 'email' ? 1 : -1; }
+        renderTable();
+      });
+      tr.appendChild(th);
+    });
+    tr.appendChild(el('th', ''));
+  }
+
+  function view() {
+    var q = $('q').value.trim().toLowerCase();
+    return users.filter(function (u) { return !q || u.email.toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) {
+        var x = sortVal(a, sortBy), y = sortVal(b, sortBy);
+        return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
+      });
+  }
+
+  function renderTable() {
+    renderHead();
+    var list = view(), body = $('rows'); body.textContent = '';
+    list.forEach(function (u) {
+      var tr = document.createElement('tr');
+      var c = el('td', u.email); tr.appendChild(c);
+      [['created'], ['lastLogin'], ['lastSync']].forEach(function (k) { var td = el('td', ago(u[k[0]]), 'muted'); td.title = full(u[k[0]]); tr.appendChild(td); });
+      tr.appendChild(el('td', String(u.devices)));
+      tr.appendChild(el('td', interval(u)));
+      tr.appendChild(el('td', windows(u)));
+      [u.alerts, u.telegram, u.humanize, u.updates].forEach(function (v) { var td = document.createElement('td'); td.appendChild(yesno(v)); tr.appendChild(td); });
+      var act = document.createElement('td'), del = el('button', 'Delete', 'btn btn--del');
+      del.type = 'button';
+      del.addEventListener('click', function () { removeUser(u, del); });
+      act.appendChild(del); tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    $('count').textContent = list.length + (list.length === 1 ? ' user' : ' users') + (list.length !== users.length ? ' of ' + users.length : '');
+  }
+
+  async function removeUser(u, btn) {
+    var ok = confirm('Delete ' + u.email + '?\n\nThis permanently removes their account, saved settings and Telegram connection from your server. The extension on their computer keeps working with the settings it already has, but it can no longer sync.');
+    if (!ok) return;
+    btn.disabled = true;
+    try {
+      var r = await fetch('/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-Admin': '1' }, body: JSON.stringify({ email: u.email }), credentials: 'same-origin' });
+      if (r.ok) return load();
+      btn.disabled = false;
+      alert(r.status === 404 ? 'That user is already gone.' : 'Could not delete (' + r.status + ').');
+      if (r.status === 404) load();
+    } catch (e) { btn.disabled = false; alert('Could not reach the server.'); }
+  }
+
+  function kpi(label, value) { var d = el('div', undefined, 'kpi'); d.appendChild(el('b', String(value))); d.appendChild(el('span', label)); return d; }
+
+  function renderInstalls(i) {
+    var k = $('ikpis'); k.textContent = '';
+    var accounts = users.length;
+    [['Installs counted', i.total], ['Active in 24 h', i.active24h], ['Active in 7 days', i.active7d], ['Active in 30 days', i.active30d],
+     ['New in 7 days', i.new7d], ['Without an account (about)', Math.max(0, i.total - accounts)]]
+      .forEach(function (q) { k.appendChild(kpi(q[0], q[1])); });
+    var bars = $('ibars'); bars.textContent = '';
+    var max = Math.max.apply(null, i.daily.map(function (d) { return d.n; }).concat([1]));
+    i.daily.forEach(function (d) {
+      var b = document.createElement('i');
+      b.style.height = Math.max(2, Math.round(d.n / max * 96)) + 'px';
+      if (!d.n) b.className = 'zero';
+      b.title = d.day + ': ' + d.n + ' new install' + (d.n === 1 ? '' : 's');
+      bars.appendChild(b);
+    });
+    $('iaxL').textContent = i.daily.length ? i.daily[0].day : '';
+    $('vers').textContent = i.versions.length ? 'Versions in use: ' + i.versions.map(function (v) { return v.version + ' (' + v.n + ')'; }).join(', ') : 'No installs have reported yet. They appear once people update to 2.5.5.';
+    var rows = $('irows'); rows.textContent = '';
+    i.recent.forEach(function (r) {
+      var tr = document.createElement('tr');
+      tr.appendChild(el('td', r.id + '…')); tr.appendChild(el('td', r.version));
+      var a = el('td', ago(r.firstSeen), 'muted'); a.title = full(r.firstSeen); tr.appendChild(a);
+      var b = el('td', ago(r.lastSeen), 'muted'); b.title = full(r.lastSeen); tr.appendChild(b);
+      tr.appendChild(el('td', String(r.pings)));
+      rows.appendChild(tr);
+    });
+  }
+
+  function render(data) {
+    users = data.users;
+    if (data.installs) renderInstalls(data.installs);
+    $('aSend').textContent = 'Send to everyone (' + (data.emailUsers == null ? users.length : data.emailUsers) + ')';
+    emailUsers = data.emailUsers == null ? users.length : data.emailUsers;
+    var s = data.stats, k = $('kpis'); k.textContent = '';
+    [['Total users', s.users], ['New in 24 h', s.signups24h], ['New in 7 days', s.signups7d], ['New in 30 days', s.signups30d],
+     ['Signed in now (sessions)', s.activeSessions], ['With Telegram', s.withTelegram], ['Act human on', s.humanizeOn], ['Alerts on', s.alertsOn]]
+      .forEach(function (p) { k.appendChild(kpi(p[0], p[1])); });
+
+    var bars = $('bars'); bars.textContent = '';
+    var max = Math.max.apply(null, data.daily.map(function (d) { return d.n; }).concat([1]));
+    data.daily.forEach(function (d) {
+      var i = document.createElement('i');
+      i.style.height = Math.max(2, Math.round(d.n / max * 96)) + 'px';
+      if (!d.n) i.className = 'zero';
+      i.title = d.day + ': ' + d.n + ' sign-up' + (d.n === 1 ? '' : 's');
+      bars.appendChild(i);
+    });
+    $('axL').textContent = data.daily.length ? data.daily[0].day : '';
+    $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString() + '. "Last login" is the newest sign-in on any computer; "Last sync" is the last time settings were saved to the account.';
+    renderTable();
+  }
+
+  function show(loggedIn) { $('login').hidden = loggedIn; $('dash').hidden = !loggedIn; $('tools').hidden = !loggedIn; }
+
+  // the browser sends the sign-in cookie by itself: no cookie (or an expired one) just shows the key screen
+  async function load() {
+    try {
+      var r = await fetch('/admin/users', { cache: 'no-store', credentials: 'same-origin' });
+      if (r.status === 429) { $('err').textContent = 'Too many tries. Wait a minute.'; return show(false); }
+      if (!r.ok) return show(false);
+      render(await r.json());
+      show(true);
+    } catch (e) { $('err').textContent = 'Could not reach the server.'; show(false); }
+  }
+
+  $('form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var em = $('email').value.trim(), pw = $('pass').value;
+    if (!em || !pw) return void ($('err').textContent = 'Enter your email and password.');
+    // checking a password takes about 2 seconds on purpose (it makes guessing hopeless), so say so
+    var go = $('go'); go.disabled = true; go.textContent = 'Signing in…';
+    $('err').style.color = 'var(--mut)'; $('err').textContent = 'Checking your password, this takes a couple of seconds…';
+    var fail = function (msg) { $('err').style.color = ''; $('err').textContent = msg; $('pass').value = ''; $('pass').focus(); };
+    try {
+      var r = await fetch('/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: em, password: pw }), credentials: 'same-origin' });
+      if (r.status === 429) fail('Too many wrong passwords. Try again in 15 minutes.');
+      else if (!r.ok) fail('Wrong email or password.');
+      else { $('pass').value = ''; $('err').textContent = ''; await load(); }
+    } catch (x) { fail('Could not reach the server.'); }
+    go.disabled = false; go.textContent = 'Open dashboard';
+  });
+  $('logout').addEventListener('click', async function () {
+    try { await fetch('/admin/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+    users = []; show(false);
+  });
+  $('refresh').addEventListener('click', load);
+  $('q').addEventListener('input', renderTable);
+
+  function cell(v) { v = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; }
+  $('csv').addEventListener('click', function () {
+    var iso = function (t) { return t ? new Date(t).toISOString() : ''; };
+    var lines = [['email', 'joined', 'last_login', 'last_sync', 'devices', 'refresh', 'hours', 'alerts', 'telegram', 'act_human', 'update_emails'].join(',')];
+    view().forEach(function (u) {
+      lines.push([u.email, iso(u.created), iso(u.lastLogin), iso(u.lastSync), u.devices, interval(u), windows(u), u.alerts, u.telegram, u.humanize, u.updates].map(cell).join(','));
+    });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+    a.download = 'auto-refresh-users.csv'; document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  async function post(path, body) {
+    var r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin': '1' }, body: JSON.stringify(body), credentials: 'same-origin' });
+    var d = {}; try { d = await r.json(); } catch (e) {}
+    return { ok: r.ok, status: r.status, data: d };
+  }
+  function say(t) { $('aStatus').textContent = t; }
+  function msg() { return { subject: $('aSubject').value.trim(), body: $('aBody').value.trim() }; }
+
+  $('aTest').addEventListener('click', async function () {
+    var m = msg(); if (!m.subject || !m.body) return say('Write a subject and a message first.');
+    $('aTest').disabled = true; say('Sending a test to you…');
+    var r = await post('/admin/announce/test', m);
+    say(r.ok ? 'Test sent to ' + r.data.to + '. Check your inbox.' : r.status === 503 ? "Email sending isn't set up on the server yet." : (r.data.error || 'The test could not be sent (' + r.status + ').'));
+    $('aTest').disabled = false;
+  });
+
+  $('aSend').addEventListener('click', async function () {
+    var m = msg(); if (!m.subject || !m.body) return say('Write a subject and a message first.');
+    if (!confirm('Send "' + m.subject + '" by email to ' + emailUsers + ' people now? This cannot be undone.')) return;
+    $('aSend').disabled = $('aTest').disabled = true; say('Starting…');
+    var r = await post('/admin/announce', m);
+    if (!r.ok) { say(r.data.error || 'Could not start (' + r.status + ').'); $('aSend').disabled = $('aTest').disabled = false; return; }
+    var id = r.data.id, total = r.data.total, sent = 0, failed = 0, left = total;
+    while (left > 0) {
+      var s = await post('/admin/announce/send', { id: id });
+      if (!s.ok) { say('Stopped: ' + (s.status === 503 ? "email sending isn't set up on the server yet" : (s.data.error || 'error ' + s.status)) + '. Sent ' + sent + ' of ' + total + '.'); break; }
+      sent = s.data.sent; failed = s.data.failed; left = s.data.remaining;
+      say('Sent ' + sent + ' of ' + total + (failed ? ' (' + failed + ' failed)' : '') + '…');
+    }
+    if (left === 0) say('Done. Sent ' + sent + ' of ' + total + (failed ? ', ' + failed + ' failed (Gmail allows about 100 emails a day).' : '.'));
+    $('aSend').disabled = $('aTest').disabled = false;
+  });
+
+  window.__render = render; // test hook: the page can be fed data without a key
+  renderHead();
+  load();
+})();
+</script>
+</body>
+</html>
