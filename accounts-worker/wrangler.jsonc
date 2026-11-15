@@ -13,7 +13,7 @@
   "preview_urls": false,
 
   // The one email allowed to open the admin dashboard (/admin) with its normal account password.
-  "vars": { "ADMIN_EMAIL": "lynchdigitancestudios@gmail.com" },
+  // ADMIN_EMAIL is a Cloudflare secret (not stored in this repository)
 
   "d1_databases": [
     {

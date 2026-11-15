@@ -38,3 +38,6 @@ Download the zip from the live site, unzip it, open `chrome://extensions`, turn 
 
 ## Privacy
 Nothing about the pages you refresh is ever sent anywhere. Once a day the extension can check for a new version and send an anonymous install count (a random ID and the version number); both can be switched off in the popup. See the site for the full wording.
+
+## License
+All rights reserved. The code is public so you can see how it is built, but it is not open source: please do not copy or reuse it without written permission. See [LICENSE](LICENSE). The extension itself is free to install and use.
