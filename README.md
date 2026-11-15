@@ -31,7 +31,7 @@ Built by [Lynch Digitance Studios](https://www.lynchdigitancestudios.workers.dev
 python build.py          # builds dist/ and dist/lynch-digitance-auto-refresh.zip
 npx wrangler deploy      # deploys the site (run in the project root)
 ```
-Each worker is deployed with `npx wrangler deploy` inside its own folder. Secrets (admin key, password pepper, mail sender) are Cloudflare Worker secrets and are never stored in this repository.
+The site deploys automatically from `main` through Cloudflare (every push goes live). The other workers are deployed with `npx wrangler deploy` inside their own folders. Secrets (admin key, password pepper, mail sender) are Cloudflare Worker secrets and are never stored in this repository.
 
 ## Install the extension
 Download the zip from the live site, unzip it, open `chrome://extensions`, turn on Developer mode, press **Load unpacked** and choose the folder that contains `manifest.json`.
