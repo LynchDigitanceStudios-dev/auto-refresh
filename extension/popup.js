@@ -5,6 +5,8 @@
   const S = window.LynchSchedule;
   const $ = (id) => document.getElementById(id);
   const CIRC = 2 * Math.PI * 26;
+  // the same page is the small popup and, opened with ?view=advanced, the Advanced dashboard (see mode.js)
+  const ADV = document.documentElement.classList.contains('adv');
   const DEFAULT_WINDOWS = [{ from: 9 * 60, to: 17 * 60 }];
 
   let tab = null;
@@ -28,7 +30,9 @@
     rangeOn: $('rangeOn'), range: $('range'), rangeMin: $('rangeMin'),
     rangeMax: $('rangeMax'), rangeHint: $('rangeHint'),
     verNum: $('verNum'), checkUpdate: $('checkUpdate'), verMsg: $('verMsg'),
-    viewMain: $('viewMain'), viewAi: $('viewAi'),
+    viewMain: $('viewMain'), viewAi: $('viewAi'), viewReviews: $('viewReviews'),
+    rangeNote: $('rangeNote'), nameCard: $('nameCard'), sumRows: $('sumRows'), openAdvanced: $('openAdvanced'),
+    advSaved: $('advSaved'), applyBar: $('applyBar'), applyText: $('applyText'), applyBtn: $('applyBtn'),
     aiLog: $('aiLog'), aiForm: $('aiForm'), aiInput: $('aiInput'),
     aiSend: $('aiSend'), aiClear: $('aiClear'),
     viewAccount: $('viewAccount'), acctForm: $('acctForm'), acctOut: $('acctOut'), acctIn: $('acctIn'),
@@ -54,7 +58,9 @@
     els.viewMain.hidden = v !== 'main';
     els.viewAi.hidden = v !== 'ai';
     els.viewAccount.hidden = v !== 'account';
+    els.viewReviews.hidden = v !== 'reviews';
     if (v === 'account') accountOpened();
+    if (v === 'reviews') window.LynchReviewsUI.opened();
     document.querySelectorAll('.tabs__b').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
     if (v === 'ai') {
       els.aiLog.scrollTop = els.aiLog.scrollHeight;
@@ -95,6 +101,9 @@
     // is obvious rather than surprising.
     els.presets.style.opacity = els.rangeOn.checked ? '.4' : '';
     els.customVal.disabled = els.customUnit.disabled = els.rangeOn.checked;
+    // the popup has no range controls any more: say plainly that a range replaces the interval
+    els.rangeNote.hidden = !els.rangeOn.checked;
+    els.rangeNote.textContent = 'A random range of ' + Math.min(lo, hi) + '–' + Math.max(lo, hi) + ' seconds is on, so the interval above is not used. Change it in Advanced settings.';
   }
 
   els.rangeOn.addEventListener('change', syncRangeUI);
@@ -334,6 +343,7 @@
     }
     renderWins();
     paintSchedule();
+    renderSummary();
   }
 
   /* Persist on every change, so settings survive closing the popup even if
@@ -341,8 +351,9 @@
   let saveTimer = null;
   function saveDraft() {
     clearTimeout(saveTimer);
+    renderSummary();
     saveTimer = setTimeout(() => {
-      chrome.storage.local.set({ defaults: collect() }).then(notifyEdited);
+      chrome.storage.local.set({ defaults: collect() }).then(() => { notifyEdited(); flashSaved(); refreshApplyBar(); });
     }, 150);
   }
 
@@ -879,7 +890,7 @@
     // A Telegram bot token is a password. Never let one leave the popup inside a chat message.
     if (/\b\d{6,12}:[A-Za-z0-9_-]{30,60}\b/.test(text)) {
       els.aiInput.value = '';
-      aiBubble('bot', "That looks like a Telegram bot token, so I didn't send it. Please don't paste secrets into this chat. Paste it into the Telegram section on the Refresh tab instead.");
+      aiBubble('bot', "That looks like a Telegram bot token, so I didn't send it. Please don't paste secrets into this chat. Paste it into the Telegram box in Advanced settings instead.");
       return;
     }
     aiBusy = true;
@@ -983,7 +994,107 @@
   function syncHumanUI() {
     els.human.hidden = !els.notify.checked;
     els.humanActs.hidden = !els.humanize.checked;
+    els.nameCard.hidden = !els.notify.checked; // the account name only matters when alerts are on
+    renderSummary();
   }
+
+  /* ---------- the popup's short summary of what is set in Advanced ---------- */
+
+  function sumRow(label, text) {
+    const row = document.createElement('div');
+    row.className = 'sumrow';
+    const b = document.createElement('b');
+    b.textContent = label;
+    const s = document.createElement('span');
+    s.textContent = text;
+    row.append(b, s);
+    return row;
+  }
+
+  function renderSummary() {
+    if (!els.sumRows) return;
+    const rows = [];
+
+    if (els.schedOn.checked) {
+      const days = [...els.days.querySelectorAll('button.on')].map((b) => Number(b.dataset.d)).sort();
+      const dayTxt = days.length && days.length < 7 ? days.map((d) => DAY_NAME[d]).join(', ') + ' · ' : '';
+      const win = windows.length ? windows.map((w) => S.fmtMin(w.from) + '–' + S.fmtMin(w.to)).join(', ') : 'all day';
+      rows.push(['Hours', dayTxt + win + ' ' + S.zoneAbbr(els.tz.value, new Date())]);
+    } else {
+      rows.push(['Hours', 'All day, every day']);
+    }
+
+    const timing = [];
+    if (els.rangeOn.checked) {
+      const r = collectRange();
+      timing.push('random ' + r.minMs / 1000 + '–' + r.maxMs / 1000 + ' s');
+    } else if (els.jitter.checked) {
+      timing.push('±10% jitter');
+    }
+    if (els.hard.checked) timing.push('hard refresh');
+    if (timing.length) rows.push(['Timing', timing.join(' · ')]);
+
+    const tg = els.tgStatus.classList.contains('tg__status--on');
+    rows.push(['Alerts', els.notify.checked ? 'On · Telegram ' + (tg ? 'connected' : 'not connected') : 'Off']);
+    if (els.humanize.checked) rows.push(['On page', 'Acts human after each refresh']);
+
+    els.sumRows.textContent = '';
+    rows.forEach((r) => els.sumRows.appendChild(sumRow(r[0], r[1])));
+  }
+
+  /* ---------- Advanced dashboard ---------- */
+
+  // The popup opens (or brings forward) the dashboard in its own browser tab.
+  els.openAdvanced.addEventListener('click', async () => {
+    const base = chrome.runtime.getURL('popup.html');
+    const all = await chrome.tabs.query({});
+    const open = all.find((t) => (t.url || '').startsWith(base) && /[?&]view=advanced/.test(t.url));
+    if (open) {
+      await chrome.tabs.update(open.id, { active: true });
+      await chrome.windows.update(open.windowId, { focused: true });
+    } else {
+      await chrome.tabs.create({ url: base + '?view=advanced' });
+    }
+    window.close();
+  });
+
+  // Settings made here are saved for every tab started from now on. Tabs that are already running keep
+  // the settings they started with until this is pressed.
+  let applyTimer = null;
+  async function refreshApplyBar() {
+    if (!ADV) return;
+    let n = 0;
+    try { n = ((await chrome.runtime.sendMessage({ type: 'jobs' })) || {}).count || 0; } catch (e) {}
+    els.applyBar.hidden = n === 0;
+    if (n) {
+      els.applyText.textContent = n + (n === 1 ? ' tab is' : ' tabs are') + ' running with the settings ' + (n === 1 ? 'it' : 'they') +
+        ' started with. New settings apply to tabs you start next. Apply them to the running ' + (n === 1 ? 'tab' : 'tabs') + ' now?';
+    }
+  }
+
+  function flashSaved() {
+    if (!ADV) return;
+    els.advSaved.hidden = false;
+    clearTimeout(flashSaved.t);
+    flashSaved.t = setTimeout(() => { els.advSaved.hidden = true; }, 1600);
+  }
+
+  els.applyBtn.addEventListener('click', async () => {
+    clearTimeout(saveTimer);
+    const opts = collect();
+    await chrome.storage.local.set({ defaults: opts });
+    notifyEdited();
+    els.applyBtn.disabled = true;
+    let r = null;
+    try { r = await chrome.runtime.sendMessage({ type: 'applyTech', opts }); } catch (e) {}
+    els.applyBtn.disabled = false;
+    els.applyText.textContent = r && r.ok
+      ? 'Applied to ' + r.applied + (r.applied === 1 ? ' running tab.' : ' running tabs.')
+      : 'Could not apply right now. Try again.';
+    clearTimeout(applyTimer);
+    applyTimer = setTimeout(refreshApplyBar, 3000);
+  });
+  window.addEventListener('focus', refreshApplyBar);
   els.notify.addEventListener('change', syncHumanUI);
   els.humanize.addEventListener('change', syncHumanUI);
 
@@ -1013,6 +1124,7 @@
     els.tgDone.hidden = !st.connected;
     els.tgStatus.textContent = st.connected ? 'Connected' + (st.bot ? ' to ' + st.bot : '') : 'Not connected';
     els.tgStatus.classList.toggle('tg__status--on', !!st.connected);
+    renderSummary();
   }
 
   els.tgDetect.addEventListener('click', async () => {
@@ -1194,6 +1306,8 @@
 
     setInterval(paintSchedule, 1000);
     paintSchedule();
+    refreshApplyBar();                       // Advanced dashboard: how many tabs are running
+    window.LynchReviewsUI.maybePrompt();     // popup: the background says whether it is time for the review window
 
     [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab) { renderWins(); return; }
@@ -1207,7 +1321,10 @@
 
     const res = await chrome.runtime.sendMessage({ type: 'status', tabId: tab.id });
     job = res && res.job ? res.job : null;
-    applyDefaults(job || (res && res.defaults));
+    // The technical settings always come from what is saved (they are edited in Advanced); a running tab
+    // only contributes what is its own: its interval and its account name.
+    const saved = res && res.defaults ? res.defaults : null;
+    applyDefaults(job ? Object.assign({}, saved || job, { intervalMs: job.intervalMs, label: job.label }) : saved);
     accountOpened(); // pull any settings changed on another computer
 
     // Settings and the assistant still work on the browser's own pages;

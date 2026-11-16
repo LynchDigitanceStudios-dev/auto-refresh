@@ -11,7 +11,7 @@
  * next window's start, rather than waking every interval to do nothing.
  */
 
-importScripts('schedule.js', 'sync.js', 'alerts.js', 'human.js'); // define self.LynchSchedule, LynchSync, LynchAlerts and LynchHuman
+importScripts('schedule.js', 'sync.js', 'alerts.js', 'human.js', 'review-core.js'); // define self.LynchSchedule, LynchSync, LynchAlerts, LynchHuman and LynchReview
 
 const ALARM_PREFIX = 'lynch-refresh-';
 const KEEPALIVE = 'lynch-keepalive';
@@ -480,16 +480,11 @@ async function fire(tabId) {
 
 /* ---------- public actions ---------- */
 
-async function start(tabId, opts) {
-  const existing = await getJob(tabId);
-  let startTitle = '';
-  try {
-    const t = await chrome.tabs.get(tabId);
-    if (t && t.title && !titleLooksBlocked(t.title)) startTitle = t.title.slice(0, 60);
-  } catch (e) { /* tab gone: the next refresh finds out */ }
-  const job = {
-    tabId,
-    intervalMs: opts.intervalMs,
+/* The technical settings (everything in the Advanced dashboard). A tab gets a copy of them when it
+   starts, and "apply to running tabs" replaces that copy. The interval and the account name are
+   per tab and are NOT part of this. */
+function techFields(opts) {
+  return {
     hardRefresh: !!opts.hardRefresh,
     notifyOnChange: !!opts.notifyOnChange,
     sound: !!opts.sound,
@@ -497,12 +492,27 @@ async function start(tabId, opts) {
     range: opts.range || null,
     schedule: opts.schedule || null,
     pageTimer: !!opts.pageTimer,
-    label: typeof opts.label === 'string' ? opts.label.trim().slice(0, 40) : '',
     humanBlock: opts.humanBlock !== false,
     humanWords: Array.isArray(opts.humanWords) ? opts.humanWords.filter((w) => typeof w === 'string' && w.trim()).slice(0, 10) : [],
     pauseOnHuman: opts.pauseOnHuman !== false,
     humanize: !!opts.humanize,
-    humanClicks: opts.humanClicks !== false,
+    humanClicks: opts.humanClicks !== false
+  };
+}
+
+async function start(tabId, opts) {
+  const existing = await getJob(tabId);
+  let startTitle = '';
+  try {
+    const t = await chrome.tabs.get(tabId);
+    if (t && t.title && !titleLooksBlocked(t.title)) startTitle = t.title.slice(0, 60);
+  } catch (e) { /* tab gone: the next refresh finds out */ }
+  if (!existing) LynchReview.noteUse(); // a new install is asked for a review 3 days after its first use
+  const job = {
+    tabId,
+    intervalMs: opts.intervalMs,
+    ...techFields(opts),
+    label: typeof opts.label === 'string' ? opts.label.trim().slice(0, 40) : '',
     humanState: {},
     lastTitle: (existing && existing.lastTitle) || startTitle,
     paused: false,
@@ -552,6 +562,27 @@ async function setPaused(tabId, paused) {
   await paintBadge();
   await syncHumanAlarm();
   return job;
+}
+
+/* Advanced dashboard -> "Apply to running tabs": every running tab gets the new technical settings.
+   Each tab keeps its own interval and account name. A tab that is paused (by hand, or waiting for a
+   human) stays paused; the others are re-armed, because the schedule, random range or jitter may have
+   changed how long the current wait should be. */
+async function applyTech(opts) {
+  if (!opts || typeof opts !== 'object') return { ok: false, applied: 0 };
+  const jobs = await getJobs();
+  const fields = techFields(opts);
+  let applied = 0;
+  for (const [id, old] of Object.entries(jobs)) {
+    const tabId = Number(id);
+    const job = Object.assign({}, old, fields);
+    if (old.pageTimer && !job.pageTimer) await syncOverlay(tabId, null); // timer switched off: take it off the page now
+    if (job.paused) await putJob(tabId, job);
+    else await arm(tabId, job);
+    applied++;
+  }
+  await paintBadge();
+  return { ok: true, applied };
 }
 
 /* ---------- once a day: count this install, and say when a new version is out ----------
@@ -752,6 +783,15 @@ paintBadge();
 LynchSync.ensureAlarm();
 ensureDaily().then(maybeDaily);
 
+// Right after the extension is updated (or reloaded). Someone who updates from a version that had no
+// reviews yet is asked for one at once, so the popup is opened for them (the review window is in it).
+chrome.runtime.onInstalled.addListener(async (details) => {
+  const r = await LynchReview.onInstalled(details);
+  if (r && r.openNow && chrome.action.openPopup) {
+    setTimeout(() => { try { chrome.action.openPopup().catch(() => {}); } catch (e) { /* no window to open it in */ } }, 1500);
+  }
+});
+
 chrome.runtime.onStartup.addListener(async () => {
   await setJobs({});
   await paintBadge();
@@ -829,6 +869,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       case 'acct:delete': sendResponse(await LynchSync.deleteAccount(msg.password)); break;
       case 'acct:sync': sendResponse(await LynchSync.syncNow()); break;
       case 'acct:dirty': sendResponse(await LynchSync.markDirty()); break;
+      case 'jobs': sendResponse({ count: Object.keys(await getJobs()).length }); break;
+      case 'applyTech': sendResponse(await applyTech(msg.opts)); break;
+      case 'review:prompt': sendResponse(await LynchReview.prompt()); break;
+      case 'review:later': sendResponse(await LynchReview.later()); break;
+      case 'review:never': sendResponse(await LynchReview.never()); break;
+      case 'review:submit': sendResponse(await LynchReview.submit(msg.rating, msg.text)); break;
+      case 'review:list': sendResponse(await LynchReview.list()); break;
       default:
         sendResponse(null);
     }

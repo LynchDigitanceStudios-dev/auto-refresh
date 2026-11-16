@@ -12,6 +12,9 @@ import ADMIN_HTML from "./admin.html";
 // extension ID is accepted. localhost is only for testing the popup in a page.
 const EXTENSION_ORIGIN = /^chrome-extension:\/\/[a-p]{32}$/;
 const DEV_ORIGINS = new Set(["http://localhost:8793", "http://127.0.0.1:8793"]);
+// The landing page shows the public reviews, so its own address may call this server too.
+const SITE_ORIGIN = "https://autorefresh.lynchdigitancestudios.workers.dev";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const MAX_BODY = 8192;        // bytes; settings are tiny, so anything bigger is abuse
 const SESSION_DAYS = 90;
@@ -316,11 +319,39 @@ const cleanMessage = (b) => {
   return { subject, body };
 };
 
+/* ---------- reviews ----------
+   The only identity shown with a review is a short name made from the account email ("Ethan C."),
+   never the address itself. Someone without an account posts as "Auto Refresh user". */
+const ANON_NAME = "Auto Refresh user";
+
+function reviewName(email) {
+  if (!email) return ANON_NAME;
+  const local = String(email).split("@")[0].split("+")[0];
+  const parts = local.split(/[._-]+/).map((p) => p.replace(/[^a-z]/gi, "")).filter(Boolean);
+  if (!parts.length) return ANON_NAME;
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const first = cap(parts[0].slice(0, 14)) + (parts[0].length > 14 ? "…" : "");
+  return parts[1] ? first + " " + parts[1].charAt(0).toUpperCase() + "." : first;
+}
+
+function cleanReviewText(v) {
+  if (v === undefined || v === null) return "";
+  if (typeof v !== "string") throw new HttpError(400, "Your review couldn't be saved.");
+  const t = v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  if (t.length > 500) throw new HttpError(400, "Please keep your review under 500 characters.");
+  if (/(https?:\/\/|www\.)/i.test(t)) throw new HttpError(400, "Please leave links out of your review.");
+  return t;
+}
+
+// a short per-isolate cache so a flood of page views can't turn into a flood of database reads
+const REVIEW_CACHE_MS = 15000;
+const reviewCache = new Map();
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
     // the owner dashboard (GET /admin) calls this same server, so its own origin is fine too
-    const allowed = EXTENSION_ORIGIN.test(origin) || DEV_ORIGINS.has(origin) || origin === new URL(request.url).origin;
+    const allowed = EXTENSION_ORIGIN.test(origin) || DEV_ORIGINS.has(origin) || origin === SITE_ORIGIN || origin === new URL(request.url).origin;
     // A request with no Origin (curl, a browser address bar) is fine: every
     // route is token-protected. A request from some other website is not.
     if (origin && !allowed) return new Response("Forbidden", { status: 403 });
@@ -349,6 +380,92 @@ export default {
           "pings = installs.pings + (CASE WHEN excluded.last_seen - installs.last_seen > 21600000 THEN 1 ELSE 0 END)"
         ).bind(id, now, now, v).run();
         return json({ ok: true }, 200, cors);
+      }
+
+      /* ---------- reviews: public list (extension + landing page) ---------- */
+      if (method === "GET" && path === "/reviews") {
+        const want = int(new URL(request.url).searchParams.get("limit"), 1, 100) ?? 30;
+        const hit = reviewCache.get(want);
+        let body;
+        if (hit && Date.now() - hit.at < REVIEW_CACHE_MS) body = hit.body;
+        else {
+          const agg = await env.DB.prepare("SELECT COUNT(*) AS n, AVG(rating) AS avg FROM reviews WHERE hidden = 0").first();
+          const rows = (await env.DB.prepare(
+            "SELECT id, name, rating, body, created_at FROM reviews WHERE hidden = 0 ORDER BY created_at DESC, id DESC LIMIT ?"
+          ).bind(want).all()).results || [];
+          body = JSON.stringify({
+            count: agg.n || 0,
+            average: agg.n ? Math.round(agg.avg * 10) / 10 : 0,
+            reviews: rows.map((r) => ({ id: r.id, name: r.name, rating: r.rating, text: r.body, at: r.created_at })),
+          });
+          reviewCache.set(want, { at: Date.now(), body });
+        }
+        return new Response(body, { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=30", ...cors } });
+      }
+
+      /* ---------- reviews: what this account / install has already written ---------- */
+      if (method === "GET" && path === "/reviews/mine") {
+        const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+        if (!(await limit(env, "review:" + ip))) throw new HttpError(429, "Slow down.");
+        const acct = /^Bearer /.test(request.headers.get("Authorization") || "") ? await authUser(request, env) : null;
+        const inst = new URL(request.url).searchParams.get("install") || "";
+        let row = null;
+        if (acct) row = await env.DB.prepare("SELECT id, name, rating, body FROM reviews WHERE user_id = ?").bind(acct.id).first();
+        if (!row && UUID_RE.test(inst)) row = await env.DB.prepare("SELECT id, name, rating, body FROM reviews WHERE install_id = ?").bind(inst).first();
+        // a review the owner hid is still shown to its author as theirs: hiding is silent
+        return json({ review: row ? { id: row.id, name: row.name, rating: row.rating, text: row.body } : null }, 200, cors);
+      }
+
+      /* ---------- reviews: write or edit one ---------- */
+      if (method === "POST" && path === "/reviews") {
+        const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+        if (!(await limit(env, "review:" + ip))) throw new HttpError(429, "Slow down. Try again in a minute.");
+        const b = await readJson(request);
+        const rating = Number.isInteger(b.rating) && b.rating >= 1 && b.rating <= 5 ? b.rating : null; // 4.5 stars is not a thing
+        if (rating === null) throw new HttpError(400, "Choose 1 to 5 stars.");
+        const text = cleanReviewText(b.text);
+        const install = typeof b.install === "string" && UUID_RE.test(b.install) ? b.install : null;
+        const version = typeof b.v === "string" && /^\d{1,3}(\.\d{1,3}){1,3}$/.test(b.v) ? b.v : null;
+        // an account is optional: with a valid token the review belongs to it and its name comes from the email
+        const acct = /^Bearer /.test(request.headers.get("Authorization") || "") ? await authUser(request, env) : null;
+        if (!acct && !install) throw new HttpError(400, "Your review couldn't be saved.");
+
+        const now = Date.now();
+        const ipHash = (await hmacHex(env.PEPPER, "review-ip:" + ip)).slice(0, 24);
+        let row = null;
+        if (acct) row = await env.DB.prepare("SELECT id, name FROM reviews WHERE user_id = ?").bind(acct.id).first();
+        let installFree = !!install;
+        if (!row && install) {
+          const byInstall = await env.DB.prepare("SELECT id, user_id, name FROM reviews WHERE install_id = ?").bind(install).first();
+          // a signed-out edit, or the account signing in on this install, continues that review;
+          // one that belongs to a different account stays theirs
+          if (byInstall && (!byInstall.user_id || !acct || byInstall.user_id === acct.id)) row = byInstall;
+          else if (byInstall) installFree = false;
+        }
+
+        if (row) {
+          if (acct) {
+            await env.DB.prepare(
+              "UPDATE reviews SET rating = ?, body = ?, version = COALESCE(?, version), updated_at = ?, user_id = ?, email = ?, name = ?, install_id = COALESCE(install_id, ?) WHERE id = ?"
+            ).bind(rating, text, version, now, acct.id, acct.email, reviewName(acct.email), installFree ? install : null, row.id).run();
+          } else {
+            await env.DB.prepare("UPDATE reviews SET rating = ?, body = ?, version = COALESCE(?, version), updated_at = ? WHERE id = ?")
+              .bind(rating, text, version, now, row.id).run();
+          }
+        } else {
+          const recent = (await env.DB.prepare("SELECT COUNT(*) AS n FROM reviews WHERE ip_hash = ? AND created_at > ?").bind(ipHash, now - DAY).first()).n;
+          if (recent >= 3) throw new HttpError(429, "That's enough reviews from this connection for today.");
+          try {
+            await env.DB.prepare(
+              "INSERT INTO reviews (user_id, install_id, email, name, rating, body, version, created_at, updated_at, hidden, ip_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)"
+            ).bind(acct ? acct.id : null, installFree ? install : null, acct ? acct.email : null, reviewName(acct ? acct.email : null), rating, text, version, now, now, ipHash).run();
+          } catch {
+            throw new HttpError(409, "Your review is already saved.");
+          }
+        }
+        reviewCache.clear();
+        const shown = acct ? reviewName(acct.email) : row ? row.name : ANON_NAME;
+        return json({ ok: true, name: shown, created: !row }, row ? 200 : 201, cors);
       }
 
       /* ---------- unsubscribe from update emails (a button, so a mail scanner opening the link changes nothing) ---------- */
@@ -462,9 +579,11 @@ export default {
           env.DB.prepare("DELETE FROM settings WHERE user_id = ?").bind(u.id),
           env.DB.prepare("DELETE FROM telegram WHERE user_id = ?").bind(u.id),
           env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(u.id),
+          env.DB.prepare("DELETE FROM reviews WHERE user_id = ?").bind(u.id),
           env.DB.prepare("DELETE FROM users WHERE id = ?").bind(u.id),
           env.DB.prepare("DELETE FROM login_attempts WHERE email = ?").bind(email),
         ]);
+        reviewCache.clear();
         return json({ ok: true }, 200, cors);
       }
 
@@ -595,6 +714,38 @@ export default {
         return out;
       }
 
+      /* ---------- owner-only: every review, hidden ones included, with the real email ---------- */
+      if (method === "GET" && path === "/admin/reviews") {
+        await adminCheck();
+        const rows = (await env.DB.prepare(
+          "SELECT id, name, email, user_id AS uid, rating, body, version, created_at AS created, updated_at AS updated, hidden FROM reviews ORDER BY created_at DESC, id DESC LIMIT 1000"
+        ).all()).results || [];
+        const shown = rows.filter((r) => !r.hidden);
+        const out = json({
+          stats: {
+            total: rows.length,
+            visible: shown.length,
+            hidden: rows.length - shown.length,
+            average: shown.length ? Math.round((shown.reduce((n, r) => n + r.rating, 0) / shown.length) * 10) / 10 : 0,
+          },
+          reviews: rows.map((r) => ({ id: r.id, name: r.name, email: r.email || null, account: !!r.uid, rating: r.rating, text: r.body, version: r.version || null, created: r.created, updated: r.updated, hidden: !!r.hidden })),
+        }, 200, cors);
+        if (viaCookie) out.headers.append("Set-Cookie", await cookieHeader());
+        return out;
+      }
+
+      // hide (or show again) one review: it disappears from the extension and the website, the row stays
+      if (method === "POST" && path === "/admin/reviews/hide") {
+        await adminCheck(true);
+        const b = await readJson(request);
+        const id = int(b.id, 1, 1e12);
+        if (id === null || typeof b.hidden !== "boolean") throw new HttpError(400, "Bad request.");
+        const res = await env.DB.prepare("UPDATE reviews SET hidden = ? WHERE id = ?").bind(b.hidden ? 1 : 0, id).run();
+        if (!res.meta.changes) throw new HttpError(404, "No such review.");
+        reviewCache.clear();
+        return json({ ok: true, hidden: b.hidden }, 200, cors);
+      }
+
       /* ---------- owner-only counts ---------- */
       if (method === "GET" && path === "/admin/stats") {
         await adminCheck();
@@ -721,9 +872,11 @@ export default {
           env.DB.prepare("DELETE FROM settings WHERE user_id = ?").bind(user.id),
           env.DB.prepare("DELETE FROM telegram WHERE user_id = ?").bind(user.id),
           env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
+          env.DB.prepare("DELETE FROM reviews WHERE user_id = ?").bind(user.id),
           env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id),
           env.DB.prepare("DELETE FROM login_attempts WHERE email = ?").bind(user.email),
         ]);
+        reviewCache.clear();
         return json({ ok: true }, 200, cors);
       }
 

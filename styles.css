@@ -258,3 +258,18 @@ code{
   *{animation:none !important;transition:none !important}
   html{scroll-behavior:auto}
 }
+
+/* ---------- reviews (section stays hidden until the server returns at least one) ---------- */
+#reviews[hidden]{display:none}
+.revavg{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+.revavg strong{font-size:28px;color:var(--ink);letter-spacing:-.02em}
+.revavg .revcard__stars{font-size:20px}
+.revgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;align-items:start}
+.revcard{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--card-shadow);padding:20px 22px;display:grid;gap:10px}
+.revcard__top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.revcard__stars{color:var(--gold);letter-spacing:.1em;font-size:18px;white-space:nowrap}
+.revcard__stars i{font-style:normal;color:#dccdb9}
+.revcard__date{color:var(--mut-faint);font-size:12.5px}
+.revcard__text{margin:0;color:var(--ink);font-size:15px;white-space:pre-line;word-break:break-word}
+.revcard__name{font-weight:700;font-size:14px}
+.revnote{color:var(--mut-faint);font-size:12.5px;margin:28px auto 0;max-width:600px}

@@ -72,3 +72,24 @@ CREATE TABLE IF NOT EXISTS announce_sent (
   ok              INTEGER NOT NULL,
   PRIMARY KEY (announcement_id, email)
 );
+
+-- Reviews (extension 2.6.0+). One per account, or one per install when posted without an account.
+-- "name" is the only identity ever shown publicly (made from the email, never the email itself).
+-- hidden = 1 removes it from the extension and the website without deleting it (owner dashboard).
+CREATE TABLE IF NOT EXISTS reviews (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER,                         -- NULL when posted without an account
+  install_id  TEXT,                            -- random id of the install that posted it
+  email       TEXT,                            -- account holders only; owner dashboard only
+  name        TEXT    NOT NULL,                -- public display name
+  rating      INTEGER NOT NULL,                -- 1..5
+  body        TEXT    NOT NULL DEFAULT '',     -- optional written review, max 500 characters
+  version     TEXT,                            -- extension version that posted it
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  hidden      INTEGER NOT NULL DEFAULT 0,
+  ip_hash     TEXT                             -- keyed hash, only used to cap new reviews per day
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_user ON reviews(user_id) WHERE user_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_install ON reviews(install_id) WHERE install_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_reviews_shown ON reviews(hidden, created_at);

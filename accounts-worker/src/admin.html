@@ -54,6 +54,20 @@
   .muted{color:var(--mut)}
   .foot{color:var(--mut);font-size:12.5px;margin-top:12px}
   .note{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:16px;color:var(--mut);font-size:13.5px}
+  select{font:inherit;font-size:13.5px;padding:8px 10px;border-radius:10px;border:1px solid #d6c0a4;background:#fff;color:var(--ink)}
+  .revs{display:grid;gap:10px;margin-top:14px}
+  .rev{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fffdf9;display:grid;gap:6px}
+  .rev--hidden{opacity:.65;background:var(--bg2)}
+  .rev__top{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  .rev__who{font-weight:700;word-break:break-all}
+  .rev__stars{color:var(--gold);letter-spacing:.08em;font-size:17px;white-space:nowrap}
+  .rev__stars i{font-style:normal;color:#dccdb9}
+  .rev__meta{color:var(--mut);font-size:12.5px}
+  .rev__text{white-space:pre-wrap;word-break:break-word;font-size:14.5px}
+  .rev__text.none{color:var(--mut-faint,#9c8b7d);font-style:italic}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--mut);margin-left:6px;vertical-align:1px}
+  .tag--hid{border-color:#e3b9b4;color:#b3261e;background:#fdf0ee}
+  .btn--hide{padding:6px 14px;font-size:12.5px}
   [hidden]{display:none !important}
 </style>
 </head>
@@ -98,6 +112,22 @@
         </table></div>
       </details>
       <p class="foot">Counts copies of the extension version 2.5.5 or newer, which report once a day with a random ID and the version, nothing else. Older versions, and anyone who switched the count off, do not appear.</p>
+    </div>
+
+    <div class="panel" id="revPanel">
+      <div class="bar-tools" style="margin-bottom:10px">
+        <h3 style="margin:0">Reviews</h3>
+        <select id="rfilter" aria-label="Filter reviews">
+          <option value="all">All reviews</option>
+          <option value="low">Low ratings (1–2 stars)</option>
+          <option value="visible">Shown</option>
+          <option value="hidden">Hidden</option>
+        </select>
+      </div>
+      <div class="kpis" id="rkpis"></div>
+      <div class="revs" id="revs"></div>
+      <p class="foot" id="revEmpty" hidden>No reviews yet. They appear here once people leave one in the extension (version 2.6.0 or newer).</p>
+      <p class="foot">Hiding a review removes it from the extension and from the website at once, and it stops counting toward the average. The person who wrote it still sees it as theirs. Show it again any time. Reviewers appear to the public only as a short name made from their email; the full email is shown here, for you.</p>
     </div>
 
     <div class="panel" id="annPanel">
@@ -279,6 +309,64 @@
     renderTable();
   }
 
+  /* ---------- reviews ---------- */
+  var reviews = [], revStats = {};
+
+  function stars(n) {
+    var s = el('span', n >= 1 ? '★★★★★'.slice(0, n) : '', 'rev__stars');
+    s.setAttribute('aria-label', n + ' out of 5 stars');
+    if (n < 5) s.appendChild(el('i', '★★★★★'.slice(0, 5 - n)));
+    return s;
+  }
+
+  function renderReviews(data) {
+    reviews = data.reviews || []; revStats = data.stats || {};
+    var k = $('rkpis'); k.textContent = '';
+    [['Reviews', revStats.total || 0], ['Shown', revStats.visible || 0], ['Hidden', revStats.hidden || 0],
+     ['Average (shown)', revStats.visible ? Number(revStats.average).toFixed(1) + ' ★' : '—']]
+      .forEach(function (p) { k.appendChild(kpi(p[0], p[1])); });
+    var f = $('rfilter').value;
+    var list = reviews.filter(function (r) {
+      return f === 'all' || (f === 'low' && r.rating <= 2) || (f === 'visible' && !r.hidden) || (f === 'hidden' && r.hidden);
+    });
+    var box = $('revs'); box.textContent = '';
+    $('revEmpty').hidden = reviews.length > 0;
+    list.forEach(function (r) {
+      var row = el('div', undefined, 'rev' + (r.hidden ? ' rev--hidden' : ''));
+      var top = el('div', undefined, 'rev__top'), who = el('div');
+      who.appendChild(el('span', r.name, 'rev__who'));
+      who.appendChild(el('span', r.account ? 'account' : 'no account', 'tag'));
+      if (r.hidden) who.appendChild(el('span', 'hidden', 'tag tag--hid'));
+      top.appendChild(who); top.appendChild(stars(r.rating)); row.appendChild(top);
+      var meta = el('div', (r.email ? r.email + ' · ' : '') + ago(r.created) + (r.version ? ' · v' + r.version : '') +
+        (r.updated > r.created + 60000 ? ' · edited ' + ago(r.updated) : ''), 'rev__meta');
+      meta.title = full(r.created); row.appendChild(meta);
+      row.appendChild(el('div', r.text || 'No written review, just the stars.', 'rev__text' + (r.text ? '' : ' none')));
+      var act = el('div'), b = el('button', r.hidden ? 'Show again' : 'Hide', 'btn btn--hide' + (r.hidden ? '' : ' btn--del'));
+      b.type = 'button';
+      b.addEventListener('click', function () { toggleReview(r, b); });
+      act.appendChild(b); row.appendChild(act); box.appendChild(row);
+    });
+    if (reviews.length && !list.length) box.appendChild(el('p', 'Nothing matches that filter.', 'foot'));
+  }
+
+  async function loadReviews() {
+    try {
+      var r = await fetch('/admin/reviews', { cache: 'no-store', credentials: 'same-origin' });
+      if (r.ok) renderReviews(await r.json());
+    } catch (e) { /* the rest of the dashboard still works */ }
+  }
+
+  async function toggleReview(r, btn) {
+    btn.disabled = true;
+    var res = await post('/admin/reviews/hide', { id: r.id, hidden: !r.hidden });
+    if (res.ok) return loadReviews();
+    btn.disabled = false;
+    alert(res.status === 404 ? 'That review is already gone.' : 'Could not change it (' + res.status + ').');
+    if (res.status === 404) loadReviews();
+  }
+  $('rfilter').addEventListener('change', function () { renderReviews({ reviews: reviews, stats: revStats }); });
+
   function show(loggedIn) { $('login').hidden = loggedIn; $('dash').hidden = !loggedIn; $('tools').hidden = !loggedIn; }
 
   // the browser sends the sign-in cookie by itself: no cookie (or an expired one) just shows the key screen
@@ -289,6 +377,7 @@
       if (!r.ok) return show(false);
       render(await r.json());
       show(true);
+      loadReviews();
     } catch (e) { $('err').textContent = 'Could not reach the server.'; show(false); }
   }
 
@@ -361,6 +450,7 @@
   });
 
   window.__render = render; // test hook: the page can be fed data without a key
+  window.__renderReviews = renderReviews;
   renderHead();
   load();
 })();

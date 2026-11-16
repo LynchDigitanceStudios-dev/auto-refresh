@@ -377,9 +377,18 @@
     catch (e) { return { ok: false, error: 'Something went wrong. Please try again.' }; }
   };
 
+  /* For the reviews module: the session token (or null) and a way to sign out locally when the
+     server says it has expired. The popup never gets the token. */
+  async function getToken() {
+    const a = await getAccount();
+    return a && a.token ? a.token : null;
+  }
+
   root.LynchSync = {
     ALARM,
     API,
+    getToken: async () => { try { return await getToken(); } catch (e) { return null; } },
+    expire: safe(expire),
     ensureAlarm: safe(ensureAlarm),
     syncNow: safe(syncNow),
     markDirty: safe(markDirty),

@@ -35,7 +35,19 @@ for _name in ('popup.js', 'background.js'):
         open(_file, 'w', encoding='utf-8').write(_new)
         print('repointed update check in', _name, '->', SITE_URL + '/version.json')
 
+# HOLD_RELEASE=1 rebuilds the SITE only and keeps the already-published zip and version.json exactly as they
+# are in dist/. Use it while the next extension version is still being built, so a site/server deploy never
+# tells users about (or hands out) a half-finished version. Without it, everything is rebuilt as before.
+HOLD = os.environ.get('HOLD_RELEASE') == '1'
+
 DIST = p('dist')
+kept = {}
+if HOLD:
+    for _n in ('lynch-digitance-auto-refresh.zip', 'version.json'):
+        _f = os.path.join(DIST, _n)
+        assert os.path.exists(_f), 'HOLD_RELEASE needs ' + _n + ' already in dist/'
+        kept[_n] = open(_f, 'rb').read()
+    print('HOLD_RELEASE: keeping the published zip and version.json')
 # Clear the contents rather than the folder itself: a running preview server
 # holds a handle on the directory, which would make rmtree fail on Windows.
 os.makedirs(DIST, exist_ok=True)
@@ -53,7 +65,7 @@ def read(path):
 # ---------- 1. extension zip ----------
 zip_path = d('lynch-digitance-auto-refresh.zip')
 with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
-    for folder, _, files in os.walk(p('extension')):
+    for folder, _, files in ([] if HOLD else os.walk(p('extension'))):
         for name in files:
             full = os.path.join(folder, name)
             # files sit at the ROOT of the zip. A wrapper folder inside it made every unzip
@@ -61,6 +73,8 @@ with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
             # the zip supplies its own), and "Load unpacked" on the outer one fails.
             arc = os.path.relpath(full, p('extension'))
             z.write(full, arc.replace('\\', '/'))
+if HOLD:
+    open(zip_path, 'wb').write(kept['lynch-digitance-auto-refresh.zip'])
 zip_kb = round(os.path.getsize(zip_path) / 1024)
 print('zip:', zip_path, zip_kb, 'KB')
 
@@ -108,6 +122,9 @@ with open(d('version.json'), 'w', encoding='utf-8') as f:
         'notesUrl': SITE_URL + '/#update'
     }, f, indent=2)
 print('version.json:', manifest['version'])
+if HOLD:
+    open(d('version.json'), 'wb').write(kept['version.json'])
+    print('HOLD_RELEASE: version.json left exactly as published')
 
 # Netlify serves .zip as octet-stream by default; make the download explicit
 # and stop it from trying to compress an already-compressed file.
