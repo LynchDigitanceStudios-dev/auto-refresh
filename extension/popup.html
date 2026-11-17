@@ -176,6 +176,17 @@
     </div>
   </div>
 
+  <div class="card tech" id="cardStay">
+    <div class="card__title">Restarts &amp; problems</div>
+    <p class="card__sub">What happens when the browser restarts, or a tab stops refreshing.</p>
+    <label class="opt"><input type="checkbox" id="resumeOn" checked /> <span>Bring my tabs back after the browser restarts</span></label>
+    <div class="opt-sub">
+      <label class="opt"><input type="checkbox" id="resumeReopen" checked /> <span>Open the page again if the browser did not bring it back</span></label>
+    </div>
+    <label class="opt"><input type="checkbox" id="healthAlerts" checked /> <span>Tell me when refreshing stalls, fails or comes back after a restart</span></label>
+    <div class="opt__note">To bring a tab back, the page address and settings of each tab you start are kept on this computer only. They are never synced to your account and never sent anywhere. Pressing Stop, or closing just that tab, forgets it. The messages go to your own Telegram bot if you connected one (set it up under Needs-a-human alerts), and a desktop notice appears when something goes wrong.</div>
+  </div>
+
   <div class="card tech" id="cardPage">
     <div class="card__title">On the page</div>
     <p class="card__sub">What the extension does inside the page after each refresh.</p>

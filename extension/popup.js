@@ -42,6 +42,7 @@
     acctDel: $('acctDel'), acctDelPass: $('acctDelPass'), acctDelGo: $('acctDelGo'),
     label: $('label'), human: $('human'), humanBlock: $('humanBlock'), humanWords: $('humanWords'), pauseOnHuman: $('pauseOnHuman'),
     humanize: $('humanize'), humanClicks: $('humanClicks'), humanActs: $('humanActs'), humanHint: $('humanHint'), updateAlerts: $('updateAlerts'), usagePing: $('usagePing'),
+    resumeOn: $('resumeOn'), resumeReopen: $('resumeReopen'), healthAlerts: $('healthAlerts'),
     tgStatus: $('tgStatus'), tgSetup: $('tgSetup'), tgDone: $('tgDone'), tgToken: $('tgToken'), tgChat: $('tgChat'),
     tgDetect: $('tgDetect'), tgSave: $('tgSave'), tgTest: $('tgTest'), tgOff: $('tgOff'), tgMsg: $('tgMsg')
   };
@@ -359,7 +360,7 @@
 
   // The Telegram token/chat fields live inside this view but are not settings: typing
   // in them must not save or sync anything.
-  const editedSettings = (e) => { if (!e.target.closest('#tg, #privacyCard')) saveDraft(); };
+  const editedSettings = (e) => { if (!e.target.closest('#tg, #privacyCard, #cardStay')) saveDraft(); };
   els.viewMain.addEventListener('change', editedSettings);
   els.viewMain.addEventListener('input', editedSettings);
 
@@ -1037,6 +1038,7 @@
     const tg = els.tgStatus.classList.contains('tg__status--on');
     rows.push(['Alerts', els.notify.checked ? 'On · Telegram ' + (tg ? 'connected' : 'not connected') : 'Off']);
     if (els.humanize.checked) rows.push(['On page', 'Acts human after each refresh']);
+    rows.push(['Restart', els.resumeOn.checked ? 'Tabs come back by themselves' : 'Off']);
 
     els.sumRows.textContent = '';
     rows.forEach((r) => els.sumRows.appendChild(sumRow(r[0], r[1])));
@@ -1104,12 +1106,29 @@
     const p = prefs || {};
     els.updateAlerts.checked = p.updateAlerts !== false;
     els.usagePing.checked = p.usagePing !== false;
+    els.resumeOn.checked = p.resumeOn !== false;
+    els.resumeReopen.checked = p.resumeReopen !== false;
+    els.healthAlerts.checked = p.healthAlerts !== false;
+    els.resumeReopen.disabled = !els.resumeOn.checked;
+    renderSummary();
   }
-  function savePrefs() {
-    chrome.storage.local.set({ prefs: { updateAlerts: els.updateAlerts.checked, usagePing: els.usagePing.checked } });
+  async function savePrefs() {
+    els.resumeReopen.disabled = !els.resumeOn.checked;
+    await chrome.storage.local.set({ prefs: {
+      updateAlerts: els.updateAlerts.checked, usagePing: els.usagePing.checked,
+      resumeOn: els.resumeOn.checked, resumeReopen: els.resumeReopen.checked, healthAlerts: els.healthAlerts.checked
+    } });
+    renderSummary();
   }
   els.updateAlerts.addEventListener('change', savePrefs);
   els.usagePing.addEventListener('change', savePrefs);
+  els.resumeReopen.addEventListener('change', savePrefs);
+  els.healthAlerts.addEventListener('change', savePrefs);
+  // switching "bring my tabs back" off forgets every saved address at once; switching it on saves the tabs that are running now
+  els.resumeOn.addEventListener('change', async () => {
+    await savePrefs();
+    try { await chrome.runtime.sendMessage({ type: els.resumeOn.checked ? 'resume:save' : 'resume:clear' }); } catch (e) {}
+  });
 
   function tgSay(text, kind) {
     els.tgMsg.textContent = text || ''; // textContent only
