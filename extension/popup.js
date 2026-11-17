@@ -7,7 +7,7 @@
   const CIRC = 2 * Math.PI * 26;
   // the same page is the small popup and, opened with ?view=advanced, the Advanced dashboard (see mode.js)
   const ADV = document.documentElement.classList.contains('adv');
-  const DEFAULT_WINDOWS = [{ from: 9 * 60, to: 17 * 60 }];
+  const DEFAULT_WINDOWS = S.DEFAULT_WINDOWS; // seven windows, never more than 20 minutes apart (see schedule.js)
 
   let tab = null;
   let job = null;

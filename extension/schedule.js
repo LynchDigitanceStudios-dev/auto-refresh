@@ -21,6 +21,20 @@
   const MAX_WINDOWS = 7;
   const DEFAULT_TZ = 'America/New_York';
 
+  /* The time windows a new install starts with (they only count once "Only during set hours" is on).
+     Seven windows that cover the whole day with short breaks, so a tab is never idle for more than
+     20 minutes: the gaps are 5, 10, 10, 10, 10, 20 and 5 minutes (the longest is 8:00 to 8:20 PM).
+     Minutes after midnight, in the schedule's own time zone. */
+  const DEFAULT_WINDOWS = [
+    { from: 0,    to: 235 },    // 12:00 AM to  3:55 AM
+    { from: 240,  to: 390 },    //  4:00 AM to  6:30 AM
+    { from: 400,  to: 560 },    //  6:40 AM to  9:20 AM
+    { from: 570,  to: 720 },    //  9:30 AM to 12:00 PM
+    { from: 730,  to: 990 },    // 12:10 PM to  4:30 PM
+    { from: 1000, to: 1200 },   //  4:40 PM to  8:00 PM
+    { from: 1220, to: 1435 }    //  8:20 PM to 11:55 PM
+  ];
+
   const US_ZONES = [
     { id: 'America/New_York',    label: 'Eastern (New York)' },
     { id: 'America/Chicago',     label: 'Central (Chicago)' },
@@ -178,7 +192,7 @@
   }
 
   const api = {
-    MAX_WINDOWS, DEFAULT_TZ, US_ZONES,
+    MAX_WINDOWS, DEFAULT_TZ, DEFAULT_WINDOWS, US_ZONES,
     zoneNow, normalize, activeWindow, isActive, msUntilNextStart, fmtMin, zoneAbbr
   };
 
