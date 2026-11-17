@@ -100,18 +100,18 @@
       <div class="axis"><span id="axL"></span><span id="axR">today</span></div>
     </div>
     <div class="panel" id="instPanel">
-      <h3>Installs (anonymous count, includes people without an account)</h3>
+      <h3>Installs (every copy that reports in, with or without an account)</h3>
       <div class="kpis" id="ikpis"></div>
       <div class="bars" id="ibars" style="margin-top:14px"></div>
       <div class="axis"><span id="iaxL"></span><span>today</span></div>
       <p class="foot" id="vers"></p>
       <details><summary>Recent installs</summary>
         <div class="wrap" style="margin-top:10px"><table>
-          <thead><tr><th>Install</th><th>Version</th><th>First seen</th><th>Last seen</th><th>Days seen</th></tr></thead>
+          <thead><tr><th>Install</th><th>Account</th><th>Version</th><th>First seen</th><th>Last seen</th><th>Days seen</th></tr></thead>
           <tbody id="irows"></tbody>
         </table></div>
       </details>
-      <p class="foot">Counts copies of the extension version 2.5.5 or newer, which report once a day with a random ID and the version, nothing else. Older versions, and anyone who switched the count off, do not appear.</p>
+      <p class="foot">Every copy of the extension version 2.5.5 or newer reports once a day with a random ID and the version. From 2.6.0 this is always on (there is no switch), and a copy that is logged in to an account also shows that account's email here. People without an account can only be told apart by their install ID. Copies older than 2.5.5 do not appear, and neither does anyone on 2.5.5 who switched the count off.</p>
     </div>
 
     <div class="panel" id="revPanel">
@@ -259,9 +259,8 @@
 
   function renderInstalls(i) {
     var k = $('ikpis'); k.textContent = '';
-    var accounts = users.length;
     [['Installs counted', i.total], ['Active in 24 h', i.active24h], ['Active in 7 days', i.active7d], ['Active in 30 days', i.active30d],
-     ['New in 7 days', i.new7d], ['Without an account (about)', Math.max(0, i.total - accounts)]]
+     ['New in 7 days', i.new7d], ['Linked to an account', i.linked || 0], ['Not linked', Math.max(0, i.total - (i.linked || 0))]]
       .forEach(function (q) { k.appendChild(kpi(q[0], q[1])); });
     var bars = $('ibars'); bars.textContent = '';
     var max = Math.max.apply(null, i.daily.map(function (d) { return d.n; }).concat([1]));
@@ -277,7 +276,9 @@
     var rows = $('irows'); rows.textContent = '';
     i.recent.forEach(function (r) {
       var tr = document.createElement('tr');
-      tr.appendChild(el('td', r.id + '…')); tr.appendChild(el('td', r.version));
+      tr.appendChild(el('td', r.id + '…'));
+      tr.appendChild(el('td', r.email || '—', r.email ? '' : 'muted')); // textContent only: emails are user-supplied
+      tr.appendChild(el('td', r.version));
       var a = el('td', ago(r.firstSeen), 'muted'); a.title = full(r.firstSeen); tr.appendChild(a);
       var b = el('td', ago(r.lastSeen), 'muted'); b.title = full(r.lastSeen); tr.appendChild(b);
       tr.appendChild(el('td', String(r.pings)));

@@ -373,12 +373,20 @@ export default {
         const id = typeof b.id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(b.id) ? b.id : null;
         const v = typeof b.v === "string" && /^\d{1,3}(\.\d{1,3}){1,3}$/.test(b.v) ? b.v : null;
         if (!id || !v) throw new HttpError(400, "Bad request.");
+        // Extension 2.6.0+ sends the user's login too when they are logged in: the install is then linked to their
+        // account, so the owner dashboard shows whose it is. A missing, expired or bad login just means the install is
+        // counted without a link.
+        let userId = null;
+        if (/^Bearer /.test(request.headers.get("Authorization") || "")) {
+          try { userId = (await authUser(request, env)).id; } catch { /* counted, not linked */ }
+        }
         const now = Date.now();
         await env.DB.prepare(
-          "INSERT INTO installs (id, first_seen, last_seen, version, pings) VALUES (?, ?, ?, ?, 1) " +
+          "INSERT INTO installs (id, first_seen, last_seen, version, pings, user_id) VALUES (?, ?, ?, ?, 1, ?) " +
           "ON CONFLICT(id) DO UPDATE SET last_seen = excluded.last_seen, version = excluded.version, " +
+          "user_id = COALESCE(excluded.user_id, installs.user_id), " +
           "pings = installs.pings + (CASE WHEN excluded.last_seen - installs.last_seen > 21600000 THEN 1 ELSE 0 END)"
-        ).bind(id, now, now, v).run();
+        ).bind(id, now, now, v, userId).run();
         return json({ ok: true }, 200, cors);
       }
 
@@ -580,6 +588,7 @@ export default {
           env.DB.prepare("DELETE FROM telegram WHERE user_id = ?").bind(u.id),
           env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(u.id),
           env.DB.prepare("DELETE FROM reviews WHERE user_id = ?").bind(u.id),
+          env.DB.prepare("UPDATE installs SET user_id = NULL WHERE user_id = ?").bind(u.id), // the install stays counted, unlinked
           env.DB.prepare("DELETE FROM users WHERE id = ?").bind(u.id),
           env.DB.prepare("DELETE FROM login_attempts WHERE email = ?").bind(email),
         ]);
@@ -691,7 +700,11 @@ export default {
           new7d: await cnt("SELECT COUNT(*) AS n FROM installs WHERE first_seen > ?", now - 7 * DAY),
           versions: ((await env.DB.prepare("SELECT version, COUNT(*) AS n FROM installs GROUP BY version ORDER BY n DESC LIMIT 12").all()).results || []),
           daily: Array.from({ length: 30 }, (_, i) => { const day = new Date(now - (29 - i) * DAY).toISOString().slice(0, 10); return { day, n: instDays.get(day) || 0 }; }),
-          recent: ((await env.DB.prepare("SELECT id, version, first_seen AS firstSeen, last_seen AS lastSeen, pings FROM installs ORDER BY last_seen DESC LIMIT 200").all()).results || [])
+          linked: await cnt("SELECT COUNT(*) AS n FROM installs WHERE user_id IS NOT NULL"),
+          recent: ((await env.DB.prepare(
+            "SELECT i.id AS id, i.version AS version, i.first_seen AS firstSeen, i.last_seen AS lastSeen, i.pings AS pings, u.email AS email " +
+            "FROM installs i LEFT JOIN users u ON u.id = i.user_id ORDER BY i.last_seen DESC LIMIT 200"
+          ).all()).results || [])
             .map((r) => ({ ...r, id: r.id.slice(0, 8) })),
         };
         const out = json({
@@ -873,6 +886,7 @@ export default {
           env.DB.prepare("DELETE FROM telegram WHERE user_id = ?").bind(user.id),
           env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
           env.DB.prepare("DELETE FROM reviews WHERE user_id = ?").bind(user.id),
+          env.DB.prepare("UPDATE installs SET user_id = NULL WHERE user_id = ?").bind(user.id), // the install stays counted, unlinked
           env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id),
           env.DB.prepare("DELETE FROM login_attempts WHERE email = ?").bind(user.email),
         ]);

@@ -45,14 +45,17 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   window_start  INTEGER NOT NULL
 );
 
--- Anonymous install counter: one random ID per installed copy, pinged about once a day by extension 2.5.5+.
--- Holds only the random ID, the version and when it was seen. Never an email, never a page.
+-- Install report: one random ID per installed copy, sent about once a day by extension 2.5.5+ (always on since 2.6.0).
+-- Holds the random ID, the version, when it was seen and, when the user was logged in, which account it belongs to
+-- (user_id, set from the login the extension sends; cleared when that account is deleted). Never a page.
+-- On an older database add the column first:  ALTER TABLE installs ADD COLUMN user_id INTEGER;
 CREATE TABLE IF NOT EXISTS installs (
   id          TEXT    PRIMARY KEY,
   first_seen  INTEGER NOT NULL,
   last_seen   INTEGER NOT NULL,
   version     TEXT    NOT NULL,
-  pings       INTEGER NOT NULL DEFAULT 1
+  pings       INTEGER NOT NULL DEFAULT 1,
+  user_id     INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_installs_seen ON installs(last_seen);
 

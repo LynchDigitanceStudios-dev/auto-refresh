@@ -4,13 +4,31 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Auto Refresh</title>
-<!-- sets <html class="adv"> when this page is opened as the Advanced dashboard (popup.html?view=advanced) -->
+<!-- sets <html class="adv"> when this page is opened as the Advanced settings page (popup.html?view=advanced) -->
 <script src="mode.js"></script>
 <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+<div class="layout">
 
-<div class="brand">
+<!-- ================= ADVANCED: the side menu (only on the Advanced settings page) ================= -->
+<aside class="side a-only">
+  <div class="side__brand"><img src="icons/icon128.png" alt="" /><div><b>Lynch Digitance</b><small>AUTO REFRESH · ADVANCED</small></div></div>
+  <nav class="side__nav" id="sideNav">
+    <a href="#sec-timing" class="on">Timing</a>
+    <a href="#sec-hours">Active hours</a>
+    <a href="#sec-alerts">Alerts</a>
+    <a href="#sec-restart">Restarts</a>
+    <a href="#sec-updates">Updates</a>
+    <a href="#sec-reset">Reset</a>
+    <a href="#sec-about">About</a>
+  </nav>
+  <div class="side__ver">v<span id="sideVer"></span></div>
+</aside>
+
+<main class="content">
+
+<div class="brand p-only">
   <img src="icons/icon128.png" alt="" class="brand__icon" />
   <div>
     <div class="brand__name"><strong>LYNCH</strong><em>DIGITANCE</em></div>
@@ -18,19 +36,19 @@
   </div>
 </div>
 
-<div class="tabs" role="tablist">
+<div class="tabs p-only" role="tablist">
   <button class="tabs__b on" data-view="main" role="tab">Refresh</button>
   <button class="tabs__b" data-view="ai" role="tab">Lynch AI</button>
   <button class="tabs__b" data-view="account" role="tab">Account</button>
   <button class="tabs__b" data-view="reviews" role="tab">Reviews</button>
 </div>
 
-<!-- ================= REFRESH VIEW (the popup) / ADVANCED DASHBOARD (same page, wide layout) ================= -->
+<!-- ================= REFRESH VIEW (the popup) / ADVANCED SETTINGS (same page, wide layout) ================= -->
 <div id="viewMain">
 
 <div class="advhead a-only">
   <h1>Advanced settings</h1>
-  <p>The technical settings for every tab you refresh. Changes save by themselves and are used by every tab you start from now on. Prefer to just say it? Ask Lynch AI in the popup, it can change these for you.</p>
+  <p class="lead">Everything here already has a sensible default. You normally never need to open this page. Changes save by themselves. Prefer to just say it? Ask Lynch AI in the popup, it can change these for you.</p>
   <span class="advsaved" id="advSaved" hidden>Saved ✓</span>
 </div>
 <div class="applybar a-only" id="applyBar" hidden>
@@ -97,68 +115,67 @@
   <button type="button" id="openAdvanced" class="btn btn--ghost btn--block">Advanced settings</button>
 </div>
 
-<!-- ===== the technical settings: hidden in the popup, laid out as cards in the Advanced dashboard ===== -->
-<div class="advgrid">
+<!-- ===== Advanced settings: hidden in the popup, a column of sections on the Advanced page ===== -->
 
-  <div class="card tech" id="cardTiming">
-    <div class="card__title">Timing</div>
-    <p class="card__sub">The refresh interval itself is chosen in the popup. These change how each wait is picked and how the page reloads.</p>
-    <label class="opt"><input type="checkbox" id="rangeOn" /> <span>Random range instead of a fixed interval</span></label>
-    <div class="range" id="range" hidden>
-      <div class="range__row">
-        <input type="number" id="rangeMin" min="1" step="1" value="250" />
-        <span>to</span>
-        <input type="number" id="rangeMax" min="1" step="1" value="300" />
-        <span class="range__unit">sec</span>
-      </div>
-      <div class="range__hint" id="rangeHint">Each refresh waits a random 250–300s.</div>
-    </div>
-    <label class="opt"><input type="checkbox" id="jitter" /> <span>Random ±10% jitter on a fixed interval</span></label>
-    <label class="opt"><input type="checkbox" id="hardRefresh" /> <span>Hard refresh (bypass cache)</span></label>
-  </div>
-
-  <div class="card tech" id="cardHours">
-    <div class="card__title">Active hours</div>
-    <p class="card__sub">Only refresh during the hours you choose. Outside them the tab sleeps and wakes by itself.</p>
-    <label class="opt"><input type="checkbox" id="schedOn" /> <span>Only during set hours</span></label>
-    <div class="sched" id="sched" hidden>
-      <div class="tzrow">
-        <select id="tz" aria-label="Time zone"></select>
-        <div class="clock" id="clock">—</div>
-      </div>
-
-      <div class="lab lab--sp">Days <span class="lab__note">(none selected = every day)</span></div>
-      <div class="days" id="days">
-        <button data-d="1">M</button><button data-d="2">T</button><button data-d="3">W</button>
-        <button data-d="4">T</button><button data-d="5">F</button>
-        <button data-d="6">S</button><button data-d="0">S</button>
-      </div>
-
-      <div class="lab lab--sp">Time windows</div>
-      <div class="wins" id="wins"></div>
-      <div class="winbar">
-        <button id="addWin" class="linkbtn" type="button">+ Add time window</button>
-        <span id="winCount">1 of 7</span>
-      </div>
-
-      <div class="schedStatus" id="schedStatus"></div>
+<section class="sec tech" id="sec-timing">
+  <h2>Timing</h2>
+  <p class="sub">The refresh interval itself is chosen in the popup. Every reload skips the browser cache and each wait varies by a few percent, so there is nothing to set for that.</p>
+  <div class="card">
+    <div class="row"><div><b>Random range</b><span class="d">Wait a random time between two limits instead of the fixed interval, for example 250 to 300 seconds.</span></div>
+      <label class="sw"><input type="checkbox" id="rangeOn"><i></i></label></div>
+    <div class="row" id="range" hidden>
+      <div><b>Range</b><span class="d" id="rangeHint">Each refresh waits a random 250–300s.</span></div>
+      <div class="rangeinputs"><input type="number" id="rangeMin" min="1" step="1" value="250"> <span>to</span> <input type="number" id="rangeMax" min="1" step="1" value="300"> <span class="unit">sec</span></div>
     </div>
   </div>
+</section>
 
-  <div class="card tech" id="cardAlerts">
-    <div class="card__title">Needs-a-human alerts</div>
-    <p class="card__sub">Get told when a tab needs you: a captcha, a block page, or one of your own words appears. Set the account name for a tab in the popup.</p>
-    <label class="opt"><input type="checkbox" id="notifyOnChange" /> <span>Alert me when it needs a human touch</span></label>
-    <div class="human" id="human" hidden>
-      <label class="opt"><input type="checkbox" id="humanBlock" checked /> <span>Blocked or human check (captcha, access denied)</span></label>
-      <input type="text" id="humanWords" maxlength="300" autocomplete="off" placeholder="Words to watch for, separated by commas" />
-      <label class="opt"><input type="checkbox" id="pauseOnHuman" checked /> <span>Pause this tab until it's fixed</span></label>
-      <label class="opt"><input type="checkbox" id="sound" /> <span>Play a chime on this computer</span></label>
+<section class="sec tech" id="sec-hours">
+  <h2>Active hours</h2>
+  <p class="sub">The extension refreshes inside these windows and sleeps in the short gaps between them. The default is seven windows that cover the whole day with breaks of 5 to 20 minutes. Change them to whatever you like, or switch hours off to refresh around the clock.</p>
+  <div class="card">
+    <div class="row"><div><b>Only during set hours</b><span class="d">Switch it off to refresh around the clock.</span></div>
+      <label class="sw"><input type="checkbox" id="schedOn"><i></i></label></div>
+    <div id="sched" hidden>
+      <div class="row"><div><b>Time zone</b><span class="d">Every time below is read in this zone, not your computer's clock. It stays on this computer.</span></div>
+        <div class="tzrow"><select id="tz" aria-label="Time zone"></select><div class="clock" id="clock">—</div></div></div>
+      <div class="row row--col"><div><b>Days</b><span class="d">None selected means every day.</span></div>
+        <div class="days" id="days">
+          <button data-d="1">M</button><button data-d="2">T</button><button data-d="3">W</button>
+          <button data-d="4">T</button><button data-d="5">F</button>
+          <button data-d="6">S</button><button data-d="0">S</button>
+        </div></div>
+      <div class="row row--col"><div><b>Time windows</b><span class="d">Up to 7. Start and end of each window.</span></div>
+        <div class="winwrap">
+          <div class="wins" id="wins"></div>
+          <div class="winbar">
+            <button id="addWin" class="linkbtn" type="button">+ Add time window</button>
+            <span id="winCount">1 of 7</span>
+          </div>
+        </div>
+        <div class="schedStatus" id="schedStatus"></div></div>
+    </div>
+  </div>
+</section>
 
-      <div class="tg" id="tg">
-        <div class="lab">Telegram</div>
-        <div class="tg__status" id="tgStatus">Not connected</div>
-        <div id="tgSetup">
+<section class="sec tech" id="sec-alerts">
+  <h2>Alerts</h2>
+  <p class="sub">Get told when a tab needs you. Set the account name for a tab in the popup, so every alert says which account it is about.</p>
+  <div class="card">
+    <div class="row"><div><b>Alert me when it needs a human touch</b><span class="d">A captcha, a block page or one of your own words appears. The tab pauses so a captcha you are solving is not reset.</span></div>
+      <label class="sw"><input type="checkbox" id="notifyOnChange"><i></i></label></div>
+    <div id="human" hidden>
+      <div class="row"><div><b>Blocked or human check</b><span class="d">Captcha, access denied, "verify you are human" pages.</span></div>
+        <label class="sw"><input type="checkbox" id="humanBlock" checked><i></i></label></div>
+      <div class="row"><div><b>Words to watch for</b><span class="d">Up to 10, separated by commas. An alert goes out when one appears on the page.</span></div>
+        <input type="text" id="humanWords" class="wide" maxlength="300" autocomplete="off" placeholder="new message, action required"></div>
+      <div class="row"><div><b>Pause the tab until it is fixed</b><span class="d">It carries on by itself a few seconds after the problem is gone.</span></div>
+        <label class="sw"><input type="checkbox" id="pauseOnHuman" checked><i></i></label></div>
+      <div class="row"><div><b>Play a chime on this computer</b></div>
+        <label class="sw"><input type="checkbox" id="sound"><i></i></label></div>
+      <div class="row row--col tg" id="tg">
+        <div><b>Telegram</b><span class="d" id="tgStatus">Not connected</span></div>
+        <div id="tgSetup" class="tgsetup">
           <p class="acct__fine">1. In Telegram, message @BotFather, send /newbot and copy the token it gives you. 2. Paste it below, then send your new bot any message. 3. Press Detect chat ID, then Save. If you are logged in, the connection is also saved to your account (encrypted) so your other computers can send alerts.</p>
           <input type="password" id="tgToken" autocomplete="off" placeholder="Bot token" />
           <input type="text" id="tgChat" autocomplete="off" placeholder="Chat ID (Detect fills this in)" />
@@ -175,55 +192,66 @@
       </div>
     </div>
   </div>
+</section>
 
-  <div class="card tech" id="cardStay">
-    <div class="card__title">Restarts &amp; problems</div>
-    <p class="card__sub">What happens when the browser restarts, or a tab stops refreshing.</p>
-    <label class="opt"><input type="checkbox" id="resumeOn" checked /> <span>Bring my tabs back after the browser restarts</span></label>
-    <div class="opt-sub">
-      <label class="opt"><input type="checkbox" id="resumeReopen" checked /> <span>Open the page again if the browser did not bring it back</span></label>
-    </div>
-    <label class="opt"><input type="checkbox" id="healthAlerts" checked /> <span>Tell me when refreshing stalls, fails or comes back after a restart</span></label>
-    <div class="opt__note">To bring a tab back, the page address and settings of each tab you start are kept on this computer only. They are never synced to your account and never sent anywhere. Pressing Stop, or closing just that tab, forgets it. The messages go to your own Telegram bot if you connected one (set it up under Needs-a-human alerts), and a desktop notice appears when something goes wrong.</div>
+<section class="sec tech" id="sec-restart">
+  <h2>Restarts</h2>
+  <p class="sub">What happens when the browser restarts, or a tab stops refreshing. To bring a tab back, the page address and settings of each tab you start are kept on this computer only. They are never synced to your account and never sent anywhere.</p>
+  <div class="card">
+    <div class="row"><div><b>Bring my tabs back after the browser restarts</b><span class="d">Pressing Stop, or closing just that tab, forgets it. Closing a whole window or quitting the browser keeps it.</span></div>
+      <label class="sw"><input type="checkbox" id="resumeOn" checked><i></i></label></div>
+    <div class="row"><div><b>Open the page again if the browser did not bring it back</b></div>
+      <label class="sw"><input type="checkbox" id="resumeReopen" checked><i></i></label></div>
+    <div class="row"><div><b>Tell me when refreshing stalls, fails or comes back</b><span class="d">A message to your Telegram bot if you connected one (set it up under Alerts), and a desktop notice when something goes wrong.</span></div>
+      <label class="sw"><input type="checkbox" id="healthAlerts" checked><i></i></label></div>
   </div>
+</section>
 
-  <div class="card tech" id="cardPage">
-    <div class="card__title">On the page</div>
-    <p class="card__sub">What the extension does inside the page after each refresh.</p>
-    <label class="opt" title="After each refresh the extension moves the mouse, scrolls a little and sometimes clicks empty space, so the page sees normal activity.">
-      <input type="checkbox" id="humanize" /> <span>Act human on the page</span>
-    </label>
-    <div class="opt-sub" id="humanActs" hidden>
-      <label class="opt"><input type="checkbox" id="humanClicks" checked /> <span>Include gentle clicks on empty space</span></label>
-    </div>
-    <div class="opt__note">Moves the mouse, scrolls a little and sometimes clicks empty space after each refresh. It helps with idle timers; it can't get past real bot protection.</div>
-    <label class="opt opt--tight" title="Adds a countdown to the top-right of the page. The website can see it, so leave it off if that matters.">
-      <input type="checkbox" id="pageTimer" /> <span>Show big countdown on the page</span>
-    </label>
-    <div class="opt__note">The icon badge always counts down. The on-page timer is visible to the website.</div>
+<section class="sec tech" id="sec-updates">
+  <h2>Updates</h2>
+  <div class="card">
+    <div class="row"><div><b>Tell me when a new version is out</b><span class="d">A desktop notice, and a message to your Telegram bot if you connected one.</span></div>
+      <label class="sw"><input type="checkbox" id="updateAlerts" checked><i></i></label></div>
+    <div class="row"><div><b>Version <span id="verNum2"></span></b><span class="d">Unzip a new download over the same folder, then reload the extension.</span></div>
+      <button type="button" id="checkUpdate2" class="btn btn--ghost">Check for updates</button></div>
+    <div class="verMsg" id="verMsg2" hidden></div>
   </div>
+</section>
 
-  <div class="card tech" id="privacyCard">
-    <div class="card__title">Privacy &amp; updates</div>
-    <label class="opt"><input type="checkbox" id="updateAlerts" checked /> <span>Tell me when a new version is out</span></label>
-    <label class="opt"><input type="checkbox" id="usagePing" checked /> <span>Share an anonymous install count</span></label>
-    <div class="opt__note">Once a day the extension checks for a new version and, if this is on, sends a random install ID and the version number so the developer can count users. Never your email, settings or pages. The version alert goes to your desktop, and to your own Telegram bot if you connected one. If you write a review, its stars, text and a short name are sent and shown publicly.</div>
+<section class="sec tech" id="sec-reset">
+  <h2>Reset</h2>
+  <div class="card">
+    <div class="row"><div><b>Reset advanced settings</b><span class="d">Puts every setting on this page back to its default: the seven time windows switched on, no random range, alerts off, restarts on. Your Telegram bot, account name and time zone are kept.</span></div>
+      <button type="button" id="resetAdv" class="btn btn--ghost btn--danger">Reset</button></div>
   </div>
+</section>
 
-</div>
+<section class="sec tech" id="sec-about">
+  <h2>About</h2>
+  <div class="card">
+    <div class="row"><div><b>Lynch Digitance Auto Refresh</b><span class="d">Free tools by Lynch Digitance Studios.</span></div>
+      <a href="https://www.lynchdigitancestudios.workers.dev/" target="_blank" rel="noopener">Website ↗</a></div>
+    <div class="row"><div><b>Questions and ideas</b><span class="d">Join the Discord.</span></div>
+      <a href="https://discord.gg/aGBWVQfZsj" target="_blank" rel="noopener">Discord ↗</a></div>
+    <div class="row"><div><b>Privacy</b><span class="d">What this extension stores and sends.</span></div>
+      <a href="https://autorefresh.lynchdigitancestudios.workers.dev/#faq" target="_blank" rel="noopener">Read it ↗</a></div>
+  </div>
+</section>
 
-<div class="ver">
+<div class="ver p-only">
   <span>v<span id="verNum">2.6.0</span></span>
   <button id="checkUpdate" class="linkbtn">Check for updates</button>
 </div>
-<div class="verMsg" id="verMsg" hidden></div>
+<div class="verMsg p-only" id="verMsg" hidden></div>
 
 <div class="hint p-only">Ctrl+Shift+R start/stop · Ctrl+Shift+P pause</div>
 
-<div class="links">
+<div class="links p-only">
   <a href="https://www.lynchdigitancestudios.workers.dev/" target="_blank" rel="noopener">Our website</a>
   <span>·</span>
   <a href="https://discord.gg/aGBWVQfZsj" target="_blank" rel="noopener">Join our Discord</a>
+  <span>·</span>
+  <a href="https://autorefresh.lynchdigitancestudios.workers.dev/#faq" target="_blank" rel="noopener">Privacy</a>
 </div>
 
 </div>
@@ -334,6 +362,9 @@
      <button class="btn btn--gold btn--block" id="rvThanksBtn" type="button">Done</button>
    </div>
   </div>
+</div>
+
+</main>
 </div>
 
 <script src="schedule.js"></script>

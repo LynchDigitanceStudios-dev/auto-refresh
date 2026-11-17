@@ -108,6 +108,10 @@
     if ('label' in local) merged.label = local.label;
     const tz = local.schedule && local.schedule.tz;
     if (tz) merged.schedule = Object.assign({}, merged.schedule, { tz });
+    // An account that still holds the old factory hours (never changed: off, one 9-to-5 window) gets the new
+    // default here too, so a computer set up fresh never starts with the hours off.
+    const L = root.LynchSchedule;
+    if (L && L.isOldFactoryHours(merged.schedule)) merged.schedule = L.freshDefaultSchedule(tz);
     await chrome.storage.local.set({ defaults: merged });
     return merged;
   }

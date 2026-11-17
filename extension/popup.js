@@ -15,10 +15,14 @@
   let intervalMs = 30000;
   let windows = DEFAULT_WINDOWS.map((w) => ({ ...w }));
 
+  // These used to be switches. They are always on now, for everyone (the background worker forces them too):
+  // every reload skips the cache, each wait varies by about 10%, the countdown shows on the page, and the
+  // extension acts human on the page with gentle clicks.
+  const ALWAYS_ON = { hardRefresh: true, jitter: true, pageTimer: true, humanize: true, humanClicks: true };
+
   const els = {
     presets: $('presets'), customVal: $('customVal'), customUnit: $('customUnit'),
-    hard: $('hardRefresh'), notify: $('notifyOnChange'), sound: $('sound'),
-    jitter: $('jitter'), pageTimer: $('pageTimer'),
+    notify: $('notifyOnChange'), sound: $('sound'),
     schedOn: $('schedOn'), sched: $('sched'), days: $('days'),
     tz: $('tz'), clock: $('clock'), wins: $('wins'), addWin: $('addWin'),
     winCount: $('winCount'), schedStatus: $('schedStatus'),
@@ -30,6 +34,7 @@
     rangeOn: $('rangeOn'), range: $('range'), rangeMin: $('rangeMin'),
     rangeMax: $('rangeMax'), rangeHint: $('rangeHint'),
     verNum: $('verNum'), checkUpdate: $('checkUpdate'), verMsg: $('verMsg'),
+    verNum2: $('verNum2'), checkUpdate2: $('checkUpdate2'), verMsg2: $('verMsg2'), sideVer: $('sideVer'), resetAdv: $('resetAdv'),
     viewMain: $('viewMain'), viewAi: $('viewAi'), viewReviews: $('viewReviews'),
     rangeNote: $('rangeNote'), nameCard: $('nameCard'), sumRows: $('sumRows'), openAdvanced: $('openAdvanced'),
     advSaved: $('advSaved'), applyBar: $('applyBar'), applyText: $('applyText'), applyBtn: $('applyBtn'),
@@ -41,7 +46,7 @@
     acctSyncNow: $('acctSyncNow'), acctLogout: $('acctLogout'), acctDelToggle: $('acctDelToggle'),
     acctDel: $('acctDel'), acctDelPass: $('acctDelPass'), acctDelGo: $('acctDelGo'),
     label: $('label'), human: $('human'), humanBlock: $('humanBlock'), humanWords: $('humanWords'), pauseOnHuman: $('pauseOnHuman'),
-    humanize: $('humanize'), humanClicks: $('humanClicks'), humanActs: $('humanActs'), humanHint: $('humanHint'), updateAlerts: $('updateAlerts'), usagePing: $('usagePing'),
+    humanHint: $('humanHint'), updateAlerts: $('updateAlerts'),
     resumeOn: $('resumeOn'), resumeReopen: $('resumeReopen'), healthAlerts: $('healthAlerts'),
     tgStatus: $('tgStatus'), tgSetup: $('tgSetup'), tgDone: $('tgDone'), tgToken: $('tgToken'), tgChat: $('tgChat'),
     tgDetect: $('tgDetect'), tgSave: $('tgSave'), tgTest: $('tgTest'), tgOff: $('tgOff'), tgMsg: $('tgMsg')
@@ -283,17 +288,13 @@
   function collect() {
     return {
       intervalMs,
-      hardRefresh: els.hard.checked,
+      ...ALWAYS_ON,
       notifyOnChange: els.notify.checked,
       sound: els.sound.checked,
-      jitter: els.jitter.checked,
-      pageTimer: els.pageTimer.checked,
       label: els.label.value.trim().slice(0, 40),
       humanBlock: els.humanBlock.checked,
       humanWords: parseWords(els.humanWords.value),
       pauseOnHuman: els.pauseOnHuman.checked,
-      humanize: els.humanize.checked,
-      humanClicks: els.humanClicks.checked,
       range: collectRange(),
       // Always carry the schedule so windows survive toggling it off;
       // background.js only enforces it when enabled is true.
@@ -302,7 +303,7 @@
   }
 
   function applyDefaults(d) {
-    if (!d) { renderWins(); return; }
+    if (!d) d = { schedule: S.DEFAULT_SCHEDULE }; // a new install starts with the default hours, switched on
     if (d.intervalMs) {
       intervalMs = d.intervalMs;
       const match = [...els.presets.children].find((b) => Number(b.dataset.ms) === d.intervalMs);
@@ -312,18 +313,13 @@
         els.customUnit.value = '1000';
       }
     }
-    els.hard.checked = !!d.hardRefresh;
     els.notify.checked = !!d.notifyOnChange;
     els.sound.checked = !!d.sound;
-    els.jitter.checked = !!d.jitter;
-    els.pageTimer.checked = !!d.pageTimer;
     // the account name is per computer and never synced, so only overwrite it when the settings carry one
     if (typeof d.label === 'string') els.label.value = d.label;
     els.humanBlock.checked = d.humanBlock !== false;
     els.humanWords.value = Array.isArray(d.humanWords) ? d.humanWords.join(', ') : '';
     els.pauseOnHuman.checked = d.pauseOnHuman !== false;
-    els.humanize.checked = !!d.humanize;
-    els.humanClicks.checked = d.humanClicks !== false;
     syncHumanUI();
     if (d.range) {
       els.rangeOn.checked = !!d.range.enabled;
@@ -358,9 +354,9 @@
     }, 150);
   }
 
-  // The Telegram token/chat fields live inside this view but are not settings: typing
-  // in them must not save or sync anything.
-  const editedSettings = (e) => { if (!e.target.closest('#tg, #privacyCard, #cardStay')) saveDraft(); };
+  // The Telegram token/chat fields and the switches kept on this computer only (restarts, new-version alerts)
+  // live inside this view but are not synced settings: touching them must not save or sync anything.
+  const editedSettings = (e) => { if (!e.target.closest('#tg, #sec-restart, #sec-updates')) saveDraft(); };
   els.viewMain.addEventListener('change', editedSettings);
   els.viewMain.addEventListener('input', editedSettings);
 
@@ -522,23 +518,25 @@
   }
 
   /* Built from DOM nodes, never innerHTML: the text comes over the network. */
-  function showVerMsg(parts, cls) {
-    els.verMsg.className = 'verMsg' + (cls ? ' verMsg--' + cls : '');
-    els.verMsg.textContent = '';
+  function showVerMsg(parts, cls, target) {
+    const box = target || els.verMsg;
+    box.className = 'verMsg' + (cls ? ' verMsg--' + cls : '');
+    box.textContent = '';
     for (const p of parts) {
-      if (typeof p === 'string') { els.verMsg.append(p); continue; }
+      if (typeof p === 'string') { box.append(p); continue; }
       const node = document.createElement(p.tag);
       node.textContent = p.text;
       if (p.href) { node.href = p.href; node.target = '_blank'; node.rel = 'noopener'; }
-      els.verMsg.append(node);
+      box.append(node);
     }
-    els.verMsg.hidden = false;
+    box.hidden = false;
   }
 
-  els.checkUpdate.addEventListener('click', async () => {
+  // The popup's small link and the Advanced page's button both run this.
+  async function runUpdateCheck(btn, box) {
     const mine = chrome.runtime.getManifest().version;
-    els.checkUpdate.disabled = true;
-    els.checkUpdate.textContent = 'Checking…';
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
     try {
       const res = await fetch(VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -551,16 +549,18 @@
           'Version ', { tag: 'strong', text: String(data.version) }, ' is out. ',
           { tag: 'a', text: 'Download', href: url },
           ', unzip over your folder, then reload the extension.'
-        ], 'new');
+        ], 'new', box);
       } else {
-        showVerMsg(['You are on the latest version (' + mine + ').'], 'ok');
+        showVerMsg(['You are on the latest version (' + mine + ').'], 'ok', box);
       }
     } catch (e) {
-      showVerMsg(['Could not check right now. Try again later.'], 'err');
+      showVerMsg(['Could not check right now. Try again later.'], 'err', box);
     }
-    els.checkUpdate.disabled = false;
-    els.checkUpdate.textContent = 'Check for updates';
-  });
+    btn.disabled = false;
+    btn.textContent = 'Check for updates';
+  }
+  els.checkUpdate.addEventListener('click', () => runUpdateCheck(els.checkUpdate, els.verMsg));
+  els.checkUpdate2.addEventListener('click', () => runUpdateCheck(els.checkUpdate2, els.verMsg2));
 
   /* ---------- Lynch AI: applying settings changes ---------- */
 
@@ -571,8 +571,8 @@
   const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
   const DAY_KEY = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
   const DAY_NAME = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const OPTION_ELS = { hardRefresh: els.hard, notifyOnChange: els.notify, sound: els.sound, jitter: els.jitter, pageTimer: els.pageTimer, humanBlock: els.humanBlock, pauseOnHuman: els.pauseOnHuman, humanize: els.humanize, humanClicks: els.humanClicks };
-  const OPTION_LABEL = { hardRefresh: 'Hard refresh', notifyOnChange: 'Needs-a-human alerts', sound: 'Chime', jitter: 'Random ±10% jitter', pageTimer: 'On-page countdown', humanBlock: 'Blocked / human-check alerts', pauseOnHuman: 'Pause when a human is needed', humanize: 'Act human on the page', humanClicks: 'Gentle clicks on empty space' };
+  const OPTION_ELS = { notifyOnChange: els.notify, sound: els.sound, humanBlock: els.humanBlock, pauseOnHuman: els.pauseOnHuman };
+  const OPTION_LABEL = { notifyOnChange: 'Needs-a-human alerts', sound: 'Chime', humanBlock: 'Blocked / human-check alerts', pauseOnHuman: 'Pause when a human is needed' };
   const CONTROL_TYPES = ['start', 'stop', 'pause', 'resume'];
 
   // Hides from the first ``` onward — including a marker still mid-arrival —
@@ -842,12 +842,9 @@
       '. Current time there: ' + dayNames[now.day] + ' ' + S.fmtMin(now.min));
     lines.push('Refresh timing: ' + (r.enabled
       ? 'random range ' + r.minMs / 1000 + ' to ' + r.maxMs / 1000 + ' seconds'
-      : 'every ' + Math.round(intervalMs / 1000) + ' seconds' + (els.jitter.checked ? ' with ±10% jitter' : '')));
-    lines.push('Options: hard refresh ' + (els.hard.checked ? 'on' : 'off') +
-      ', change alerts ' + (els.notify.checked ? 'on' : 'off') +
-      ', chime ' + (els.sound.checked ? 'on' : 'off') +
-      ', on-page countdown ' + (els.pageTimer.checked ? 'on' : 'off') +
-      ', act human on the page ' + (els.humanize.checked ? 'on (' + (els.humanClicks.checked ? 'with gentle clicks' : 'no clicks') + ')' : 'off'));
+      : 'every ' + Math.round(intervalMs / 1000) + ' seconds, varied by about 10%'));
+    lines.push('Always on, not settings any more: hard refresh, the 10% variation, the countdown on the page, acting human on the page with gentle clicks');
+    lines.push('Options: change alerts ' + (els.notify.checked ? 'on' : 'off') + ', chime ' + (els.sound.checked ? 'on' : 'off'));
     // counts only: the account name and the words stay on this computer
     lines.push('Needs-a-human alerts: ' + (els.notify.checked
       ? 'on, account name ' + (els.label.value.trim() ? 'set' : 'not set (the last page title or the site name is used)') +
@@ -994,7 +991,6 @@
 
   function syncHumanUI() {
     els.human.hidden = !els.notify.checked;
-    els.humanActs.hidden = !els.humanize.checked;
     els.nameCard.hidden = !els.notify.checked; // the account name only matters when alerts are on
     renderSummary();
   }
@@ -1019,25 +1015,21 @@
     if (els.schedOn.checked) {
       const days = [...els.days.querySelectorAll('button.on')].map((b) => Number(b.dataset.d)).sort();
       const dayTxt = days.length && days.length < 7 ? days.map((d) => DAY_NAME[d]).join(', ') + ' · ' : '';
-      const win = windows.length ? windows.map((w) => S.fmtMin(w.from) + '–' + S.fmtMin(w.to)).join(', ') : 'all day';
+      const win = !windows.length ? 'all day'
+        : windows.length > 2 ? windows.length + ' windows, ' + S.fmtMin(windows[0].from) + '–' + S.fmtMin(windows[windows.length - 1].to)
+        : windows.map((w) => S.fmtMin(w.from) + '–' + S.fmtMin(w.to)).join(', ');
       rows.push(['Hours', dayTxt + win + ' ' + S.zoneAbbr(els.tz.value, new Date())]);
     } else {
       rows.push(['Hours', 'All day, every day']);
     }
 
-    const timing = [];
     if (els.rangeOn.checked) {
       const r = collectRange();
-      timing.push('random ' + r.minMs / 1000 + '–' + r.maxMs / 1000 + ' s');
-    } else if (els.jitter.checked) {
-      timing.push('±10% jitter');
+      rows.push(['Timing', 'random ' + r.minMs / 1000 + '–' + r.maxMs / 1000 + ' s']);
     }
-    if (els.hard.checked) timing.push('hard refresh');
-    if (timing.length) rows.push(['Timing', timing.join(' · ')]);
 
     const tg = els.tgStatus.classList.contains('tg__status--on');
     rows.push(['Alerts', els.notify.checked ? 'On · Telegram ' + (tg ? 'connected' : 'not connected') : 'Off']);
-    if (els.humanize.checked) rows.push(['On page', 'Acts human after each refresh']);
     rows.push(['Restart', els.resumeOn.checked ? 'Tabs come back by themselves' : 'Off']);
 
     els.sumRows.textContent = '';
@@ -1097,15 +1089,45 @@
     applyTimer = setTimeout(refreshApplyBar, 3000);
   });
   window.addEventListener('focus', refreshApplyBar);
-  els.notify.addEventListener('change', syncHumanUI);
-  els.humanize.addEventListener('change', syncHumanUI);
 
-  /* The anonymous install count and the new-version alert: two switches kept on this computer only, both on by default. */
+  /* The side menu highlights the section being read. */
+  function startScrollSpy() {
+    const links = [...document.querySelectorAll('#sideNav a')];
+    const secs = links.map((a) => document.querySelector(a.getAttribute('href')));
+    const spy = () => {
+      let cur = 0;
+      secs.forEach((sec, i) => { if (sec && sec.getBoundingClientRect().top < 140) cur = i; });
+      links.forEach((a, i) => a.classList.toggle('on', i === cur));
+    };
+    window.addEventListener('scroll', spy, { passive: true });
+    spy();
+  }
+
+  /* Reset: every setting on the Advanced page goes back to its default. The Telegram bot, the account name and
+     this computer's time zone are kept. */
+  els.resetAdv.addEventListener('click', async () => {
+    if (!confirm('Put every setting on this page back to its default?')) return;
+    const cur = collect();
+    applyDefaults(Object.assign({}, cur, {
+      notifyOnChange: false, sound: false, humanBlock: true, humanWords: [], pauseOnHuman: true,
+      range: { enabled: false, minMs: 250000, maxMs: 300000 },
+      schedule: { enabled: true, tz: cur.schedule.tz, days: [], windows: S.DEFAULT_WINDOWS.map((w) => ({ ...w })) }
+    }));
+    await chrome.storage.local.set({ defaults: collect(), prefs: { updateAlerts: true, resumeOn: true, resumeReopen: true, healthAlerts: true } });
+    await loadPrefs();
+    try { await chrome.runtime.sendMessage({ type: 'resume:save' }); } catch (e) {}
+    notifyEdited();
+    flashSaved();
+    refreshApplyBar();
+  });
+  els.notify.addEventListener('change', syncHumanUI);
+
+  /* The new-version alert and the three restart switches: kept on this computer only, all on by default. (The daily
+     install report has no switch: it is always sent, see dailyCheck in background.js.) */
   async function loadPrefs() {
     const { prefs } = await chrome.storage.local.get('prefs');
     const p = prefs || {};
     els.updateAlerts.checked = p.updateAlerts !== false;
-    els.usagePing.checked = p.usagePing !== false;
     els.resumeOn.checked = p.resumeOn !== false;
     els.resumeReopen.checked = p.resumeReopen !== false;
     els.healthAlerts.checked = p.healthAlerts !== false;
@@ -1115,13 +1137,12 @@
   async function savePrefs() {
     els.resumeReopen.disabled = !els.resumeOn.checked;
     await chrome.storage.local.set({ prefs: {
-      updateAlerts: els.updateAlerts.checked, usagePing: els.usagePing.checked,
+      updateAlerts: els.updateAlerts.checked,
       resumeOn: els.resumeOn.checked, resumeReopen: els.resumeReopen.checked, healthAlerts: els.healthAlerts.checked
     } });
     renderSummary();
   }
   els.updateAlerts.addEventListener('change', savePrefs);
-  els.usagePing.addEventListener('change', savePrefs);
   els.resumeReopen.addEventListener('change', savePrefs);
   els.healthAlerts.addEventListener('change', savePrefs);
   // switching "bring my tabs back" off forgets every saved address at once; switching it on saves the tabs that are running now
@@ -1314,7 +1335,8 @@
   /* ---------- boot ---------- */
 
   (async function init() {
-    els.verNum.textContent = chrome.runtime.getManifest().version;
+    els.verNum.textContent = els.verNum2.textContent = els.sideVer.textContent = chrome.runtime.getManifest().version;
+    if (ADV) startScrollSpy();
     loadPrefs();
 
     const store = await chrome.storage.session.get('aiHistory');
@@ -1329,7 +1351,7 @@
     window.LynchReviewsUI.maybePrompt();     // popup: the background says whether it is time for the review window
 
     [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab) { renderWins(); return; }
+    if (!tab) { applyDefaults(null); return; }
 
     els.title.textContent = tab.title || 'Untitled tab';
     try {

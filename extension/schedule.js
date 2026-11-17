@@ -21,7 +21,7 @@
   const MAX_WINDOWS = 7;
   const DEFAULT_TZ = 'America/New_York';
 
-  /* The time windows a new install starts with (they only count once "Only during set hours" is on).
+  /* The time windows every install starts with, switched ON (see DEFAULT_SCHEDULE).
      Seven windows that cover the whole day with short breaks, so a tab is never idle for more than
      20 minutes: the gaps are 5, 10, 10, 10, 10, 20 and 5 minutes (the longest is 8:00 to 8:20 PM).
      Minutes after midnight, in the schedule's own time zone. */
@@ -34,6 +34,28 @@
     { from: 1000, to: 1200 },   //  4:40 PM to  8:00 PM
     { from: 1220, to: 1435 }    //  8:20 PM to 11:55 PM
   ];
+
+  /* What a new install starts with: the seven windows above, switched ON, every day, US Eastern.
+     Anyone can change it in Advanced settings. */
+  const DEFAULT_SCHEDULE = { enabled: true, tz: DEFAULT_TZ, days: [], windows: DEFAULT_WINDOWS };
+
+  /* Before 2.6.0 the hours started switched off with one 9 AM to 5 PM window. Saved settings that still look
+     exactly like that (off, every day, that one window or none) were never changed by the person, so they get
+     the new default; anything the person set themselves (hours on, other windows, chosen days) is theirs. */
+  function isOldFactoryHours(s) {
+    if (!s) return true;
+    const days = Array.isArray(s.days) ? s.days : [];
+    const w = Array.isArray(s.windows) ? s.windows : [];
+    const nineToFive = w.length === 1 && w[0].from === 540 && w[0].to === 1020;
+    return !s.enabled && days.length === 0 && (w.length === 0 || nineToFive);
+  }
+
+  /* A fresh copy of the default schedule, keeping the given time zone when there is one (the zone is per computer). */
+  function freshDefaultSchedule(tz) {
+    const copy = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+    if (tz) copy.tz = tz;
+    return copy;
+  }
 
   const US_ZONES = [
     { id: 'America/New_York',    label: 'Eastern (New York)' },
@@ -192,7 +214,8 @@
   }
 
   const api = {
-    MAX_WINDOWS, DEFAULT_TZ, DEFAULT_WINDOWS, US_ZONES,
+    MAX_WINDOWS, DEFAULT_TZ, DEFAULT_WINDOWS, DEFAULT_SCHEDULE, US_ZONES,
+    isOldFactoryHours, freshDefaultSchedule,
     zoneNow, normalize, activeWindow, isActive, msUntilNextStart, fmtMin, zoneAbbr
   };
 

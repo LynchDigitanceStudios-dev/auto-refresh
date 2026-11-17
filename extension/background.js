@@ -34,16 +34,30 @@ async function getJob(tabId) {
   return (await getJobs())[tabId] || null;
 }
 
-async function putJob(tabId, job) {
-  const jobs = await getJobs();
-  jobs[tabId] = job;
-  await setJobs(jobs);
+/* Every change to the list of running tabs goes through one queue. Without it, two tabs refreshing at the
+   same moment would both read the same list, each add their own change, and the second write would erase
+   the first (a tab that was just stopped could even come back). One change at a time cannot do that. */
+let jobsQueue = Promise.resolve();
+function jobsLocked(fn) {
+  const run = jobsQueue.then(fn, fn);
+  jobsQueue = run.then(() => {}, () => {});
+  return run;
 }
 
-async function dropJob(tabId) {
-  const jobs = await getJobs();
-  delete jobs[tabId];
-  await setJobs(jobs);
+function putJob(tabId, job) {
+  return jobsLocked(async () => {
+    const jobs = await getJobs();
+    jobs[tabId] = job;
+    await setJobs(jobs);
+  });
+}
+
+function dropJob(tabId) {
+  return jobsLocked(async () => {
+    const jobs = await getJobs();
+    delete jobs[tabId];
+    await setJobs(jobs);
+  });
 }
 
 /* ---------- schedule window ---------- */
@@ -458,7 +472,7 @@ async function fireOnce(tabId) {
   try {
     tab = await chrome.tabs.get(tabId);
   } catch (e) {
-    await stop(tabId); // tab is gone
+    await stop(tabId, { gone: true }); // tab is gone
     return;
   }
 
@@ -525,18 +539,21 @@ async function fireOnce(tabId) {
    per tab and are NOT part of this. */
 function techFields(opts) {
   return {
-    hardRefresh: !!opts.hardRefresh,
+    // Always on, for everyone, whatever an older saved setting says (these were switches before 2.6.0):
+    // reloads skip the cache, each wait varies by +/-10%, the countdown shows on the page, and the
+    // extension acts human on the page with gentle clicks.
+    hardRefresh: true,
+    jitter: true,
+    pageTimer: true,
+    humanize: true,
+    humanClicks: true,
     notifyOnChange: !!opts.notifyOnChange,
     sound: !!opts.sound,
-    jitter: !!opts.jitter,
     range: opts.range || null,
     schedule: opts.schedule || null,
-    pageTimer: !!opts.pageTimer,
     humanBlock: opts.humanBlock !== false,
     humanWords: Array.isArray(opts.humanWords) ? opts.humanWords.filter((w) => typeof w === 'string' && w.trim()).slice(0, 10) : [],
-    pauseOnHuman: opts.pauseOnHuman !== false,
-    humanize: !!opts.humanize,
-    humanClicks: opts.humanClicks !== false
+    pauseOnHuman: opts.pauseOnHuman !== false
   };
 }
 
@@ -564,8 +581,6 @@ async function start(tabId, opts) {
     count: existing ? existing.count || 0 : 0,
     startedAt: existing && existing.startedAt ? existing.startedAt : Date.now()
   };
-  // Turned the on-page timer off while running: take it off the page now.
-  if (existing && existing.pageTimer && !job.pageTimer) await syncOverlay(tabId, null);
   await arm(tabId, job);
   if (job.recUrl) await saveRecord(job, job.recUrl); // the note that brings this tab back after a restart
   await paintBadge();
@@ -582,7 +597,7 @@ async function stop(tabId, o) {
   timers.delete(tabId);
   await chrome.alarms.clear(ALARM_PREFIX + tabId);
   const job = await getJob(tabId);
-  if (job && job.pageTimer) await syncOverlay(tabId, null);
+  if (job && job.pageTimer && !(o && o.gone)) await syncOverlay(tabId, null); // nothing to clean on a tab that is already gone
   if (forget && job && job.rid) await forgetRecord(job.rid);
   await dropJob(tabId);
   await paintBadge();
@@ -831,11 +846,12 @@ async function watchdog() {
 
 /* ---------- once a day: count this install, and say when a new version is out ----------
  *
- * One request a day to the accounts server with a RANDOM install ID and the version number, so the
- * owner can count how many copies are in use. Nothing else goes with it: no email, no settings, no
- * page. A second request fetches the public version.json; if a newer version exists the user gets a
+ * One request a day to the accounts server with the random install ID and the version number, so the
+ * owner can see every copy in use. Always on, no switch. When the user is logged in it carries their login
+ * too, so the install shows up under their account's email. Never the pages, the settings or the Telegram
+ * details. A second request fetches the public version.json; if a newer version exists the user gets a
  * desktop notification and, if they connected their own Telegram bot, a message there (once per
- * version). Both are on by default and each has its own switch in the popup ("prefs").
+ * version). That one is on by default and has a switch in Advanced settings ("prefs.updateAlerts").
  */
 const VERSION_URL = 'https://autorefresh.lynchdigitancestudios.workers.dev/version.json';
 const DAILY_ALARM = 'lynch-daily';
@@ -853,7 +869,7 @@ function isNewer(a, b) {
 
 async function getPrefs() {
   const { prefs } = await chrome.storage.local.get('prefs');
-  return Object.assign({ usagePing: true, updateAlerts: true, resumeOn: true, resumeReopen: true, healthAlerts: true }, prefs || {});
+  return Object.assign({ updateAlerts: true, resumeOn: true, resumeReopen: true, healthAlerts: true }, prefs || {});
 }
 
 async function installId() {
@@ -868,14 +884,17 @@ async function dailyCheck() {
   const prefs = await getPrefs();
   const version = chrome.runtime.getManifest().version;
 
-  if (prefs.usagePing) {
-    try {
-      await fetch(LynchSync.API + '/ping', {
-        method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: await installId(), v: version })
-      });
-    } catch (e) { /* offline or blocked: tomorrow */ }
-  }
+  // Always on (there is no switch for it): once a day the server is told that this copy exists. It carries the
+  // random install ID and the version and, when the user is logged in, their login, so the install is linked to
+  // their account. Never the pages they refresh, their settings or their Telegram details.
+  try {
+    const token = await LynchSync.getToken();
+    await fetch(LynchSync.API + '/ping', {
+      method: 'POST', cache: 'no-store',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
+      body: JSON.stringify({ id: await installId(), v: version })
+    });
+  } catch (e) { /* offline or blocked: tomorrow */ }
 
   if (prefs.updateAlerts) {
     let data = null;
@@ -1020,7 +1039,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // Closing just this tab by hand forgets it. Closing the whole window (or quitting the browser) keeps its
 // "come back after a restart" note, so the tab returns with the browser.
-chrome.tabs.onRemoved.addListener((tabId, info) => { stop(tabId, { forget: !(info && info.isWindowClosing) }); });
+chrome.tabs.onRemoved.addListener((tabId, info) => { stop(tabId, { forget: !(info && info.isWindowClosing), gone: true }); });
 
 // A reload wipes the on-page timer, so put it back once the new page is ready.
 // A page that finishes loading while the tab waits for a human may be the fixed one: look at once.
@@ -1041,7 +1060,21 @@ maybeBoot(); // a fresh browser or extension start: bring the tabs back
 
 // Right after the extension is updated (or reloaded). Someone who updates from a version that had no
 // reviews yet is asked for one at once, so the popup is opened for them (the review window is in it).
+/* 2.6.0: the seven-window schedule is the new default and it is ON. Someone who never changed the old factory
+   setting (switched off, the single 9 AM to 5 PM window, every day) gets the new default when they update;
+   anyone who set their own hours keeps them. */
+async function migrateFactoryHours(details) {
+  if (!details || details.reason !== 'update' || !isNewer('2.6.0', details.previousVersion || '0')) return;
+  const { defaults } = await chrome.storage.local.get('defaults');
+  if (!defaults || !LynchSchedule.isOldFactoryHours(defaults.schedule)) return;
+  // the time zone is per computer: keep this computer's
+  defaults.schedule = LynchSchedule.freshDefaultSchedule(defaults.schedule && defaults.schedule.tz);
+  await chrome.storage.local.set({ defaults });
+  await LynchSync.markDirty(); // an account carries the new default to its other computers
+}
+
 chrome.runtime.onInstalled.addListener(async (details) => {
+  try { await migrateFactoryHours(details); } catch (e) { /* never let this stop the rest */ }
   const r = await LynchReview.onInstalled(details);
   if (r && r.openNow && chrome.action.openPopup) {
     setTimeout(() => { try { chrome.action.openPopup().catch(() => {}); } catch (e) { /* no window to open it in */ } }, 1500);
@@ -1049,11 +1082,18 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  await setJobs({});
+  await jobsLocked(() => setJobs({}));
   await paintBadge();
   LynchSync.ensureAlarm();
   LynchSync.syncNow(); // pick up changes made on another computer
 });
+
+// The keyboard shortcut starts a tab with the saved setup. Nothing saved yet: the standard setup, with the
+// default hours (seven windows, switched on), the same as the popup shows on a fresh install.
+async function startFromShortcut(tabId) {
+  const { defaults } = await chrome.storage.local.get('defaults');
+  return start(tabId, defaults || { intervalMs: 30000, schedule: LynchSchedule.freshDefaultSchedule() });
+}
 
 chrome.commands.onCommand.addListener(async (cmd) => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1062,10 +1102,7 @@ chrome.commands.onCommand.addListener(async (cmd) => {
 
   if (cmd === 'toggle-refresh') {
     if (job) await stop(tab.id);
-    else {
-      const { defaults } = await chrome.storage.local.get('defaults');
-      await start(tab.id, defaults || { intervalMs: 30000 });
-    }
+    else await startFromShortcut(tab.id);
   } else if (cmd === 'toggle-pause' && job) {
     await setPaused(tab.id, !job.paused);
   }
