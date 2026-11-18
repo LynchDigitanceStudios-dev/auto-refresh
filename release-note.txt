@@ -1,1 +1,1 @@
-Counts installs anonymously (switch-off option), tells you when a new version is out, and unzips to one folder.
+An Advanced settings page, seven default time windows, tabs that come back after a restart, and reviews. After updating from 2.5.5, start your running tabs once.

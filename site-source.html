@@ -35,7 +35,7 @@
   <!-- HERO -->
   <section class="hero">
     <div class="hero__copy">
-      <p class="eyebrow">Chrome Extension · Manifest V3 · v2.5.5</p>
+      <p class="eyebrow">Chrome Extension · Manifest V3 · v2.6.0</p>
       <h1>Your tab, always live.<br /><span class="grad">Auto Refresh by Lynch Digitance.</span></h1>
       <p class="lede">
         Pick a tab, pick an interval, hit start. Dashboards, ticket drops, live scores, build
@@ -129,13 +129,13 @@
       </article>
       <article class="feat">
         <div class="feat__ico">🔨</div>
-        <h3>Hard refresh option</h3>
-        <p>Toggle on bypass-cache mode to force a true fresh load every cycle. Some dashboards serve stale data from cache — this makes sure you're always seeing the real thing.</p>
+        <h3>Always a true fresh load</h3>
+        <p>Every refresh bypasses the browser cache, so you never see stale data from a page that serves old copies. It is always on, with nothing to switch.</p>
       </article>
       <article class="feat feat--hl">
         <div class="feat__ico">📅</div>
-        <h3>Up to 7 time windows a day</h3>
-        <p>Set the exact hours a tab should be live — say <code>3am–5am</code>, <code>7am–12pm</code> and <code>2pm–7pm</code>. It refreshes inside each window, stops the second one ends, and starts itself again when the next one opens. Pick days of the week too.</p>
+        <h3>Up to 7 time windows a day, ready to go</h3>
+        <p>Out of the box it refreshes inside seven windows that cover the whole day with short breaks of 5 to 20 minutes. Change them to whatever you like, say <code>3am–5am</code>, <code>7am–12pm</code> and <code>2pm–7pm</code>, or switch hours off to refresh around the clock. It stops the second a window ends and starts itself again when the next one opens. Pick days of the week too.</p>
       </article>
       <article class="feat feat--hl">
         <div class="feat__ico">🌎</div>
@@ -164,18 +164,18 @@
       </article>
       <article class="feat">
         <div class="feat__ico">🔒</div>
-        <h3>Private by default</h3>
-        <p>No account needed, and nothing about the pages you refresh ever leaves your browser. Your settings stay in your browser unless you choose to log in to sync them. Once a day it checks for a new version and sends an anonymous install count (a random ID and the version number, nothing else), and both can be switched off in the popup. Otherwise it only goes online when you set something up or start it: “Check for updates”, chatting with Lynch AI, syncing after you log in, or sending alerts to your own Telegram bot.</p>
+        <h3>Your pages stay yours</h3>
+        <p>No account needed, and nothing about the pages you refresh, their addresses or their contents ever leaves your browser. Your settings stay in your browser unless you choose to log in to sync them. Once a day the extension tells our server that this copy exists: a random install ID and the version number, plus the account it belongs to if you are logged in. There is no switch for that. It also checks for a new version. Beyond that it only goes online when you set something up or start it: “Check for updates”, chatting with Lynch AI, syncing after you log in, writing a review, or sending alerts to your own Telegram bot.</p>
       </article>
       <article class="feat">
         <div class="feat__ico">🎯</div>
-        <h3>Survives sleep</h3>
-        <p>Built on Chrome's alarms system, so timers re-arm themselves after the browser idles or restarts.</p>
+        <h3>Survives restarts</h3>
+        <p>Close the browser, crash it or reboot the computer: your tabs come back and start refreshing again by themselves. One failed reload never ends a tab, and a tab that stalls is restarted and reported to your Telegram bot. Built on Chrome's alarms system, so timers also re-arm themselves after the browser idles.</p>
       </article>
       <article class="feat">
         <div class="feat__ico">📊</div>
         <h3>Countdown on the icon</h3>
-        <p>The toolbar icon counts down the seconds to the next refresh — 300, 299, 298 — for whichever tab you’re on. Gold while refreshing, grey while waiting for the next window. Want it bigger? Switch on the on-page timer and it sits in the top-right corner of the page.</p>
+        <p>The toolbar icon counts down the seconds to the next refresh — 300, 299, 298 — for whichever tab you’re on. Gold while refreshing, grey while waiting for the next window. A bigger copy of the countdown also sits in the top-right corner of the page.</p>
       </article>
       <article class="feat feat--hl">
         <div class="feat__ico">🎰</div>
@@ -185,7 +185,7 @@
       <article class="feat">
         <div class="feat__ico">🎲</div>
         <h3>Random jitter</h3>
-        <p>Adds a ±10% random delay to each refresh cycle so perfectly-timed reloads don't trigger bot detection. Looks human, stays reliable.</p>
+        <p>Adds a ±10% random delay to each refresh cycle so perfectly-timed reloads don't trigger bot detection. Looks human, stays reliable. Always on.</p>
       </article>
       <article class="feat">
         <div class="feat__ico">✋</div>
@@ -195,7 +195,12 @@
       <article class="feat feat--hl">
         <div class="feat__ico">🖱️</div>
         <h3>Acts human on the page</h3>
-        <p>Optional. After each refresh it moves the mouse along curved paths, scrolls a little and back, and now and then clicks empty space, never a link or a button. Every visit is different, so a tab looks lived in instead of reloading on a timer. Off by default.</p>
+        <p>After each refresh it moves the mouse along curved paths, scrolls a little and back, and now and then clicks empty space, never a link or a button. Every visit is different, so a tab looks lived in instead of reloading on a timer. Always on, and it stops the moment you touch the page.</p>
+      </article>
+      <article class="feat">
+        <div class="feat__ico">🧭</div>
+        <h3>Everything else on one page</h3>
+        <p>The popup stays short: pick an interval and press start. Every other setting lives on the Advanced page, a tidy dashboard with a side menu, switches that save by themselves, an “Apply to running tabs” button and a Reset. Out of the box nothing needs touching.</p>
       </article>
       <article class="feat">
         <div class="feat__ico">⏳</div>
@@ -289,7 +294,7 @@
         <span class="steps__n">3</span>
         <div>
           <h3>Check the version</h3>
-          <p>The card should now read <strong>2.5.5</strong>. Your saved settings are already back in the popup.</p>
+          <p>The card should now read <strong>2.6.0</strong>. Your saved settings are already back in the popup. Updating from 2.5.5 stops your running tabs once, so start them again; from 2.6.0 on, an update brings your tabs back by themselves.</p>
         </div>
       </li>
     </ol>
@@ -310,8 +315,23 @@
     <div class="rel">
       <article class="rel__item rel__item--new">
         <div class="rel__head">
-          <span class="rel__ver">2.5.5</span>
+          <span class="rel__ver">2.6.0</span>
           <span class="rel__tag">Latest</span>
+        </div>
+        <ul class="rel__list">
+          <li><strong>An Advanced settings page.</strong> The popup is short now: interval, account name, Start and a summary of your setup. Everything else moved to a separate Advanced page with a side menu, switches that save by themselves, “Apply to running tabs” and a Reset button.</li>
+          <li><strong>Seven time windows by default.</strong> A new install refreshes inside seven windows that cover the whole day with breaks of 5 to 20 minutes (12:00 to 3:55 AM, 4:00 to 6:30 AM, 6:40 to 9:20 AM, 9:30 AM to 12:00 PM, 12:10 to 4:30 PM, 4:40 to 8:00 PM and 8:20 to 11:55 PM, US Eastern), and “Only during set hours” is on. If you update from 2.5.5 and never changed the old setting, you get them too. Hours you set yourself are kept. Switch hours off any time to refresh around the clock.</li>
+          <li><strong>Always on, no switches.</strong> Every reload skips the cache, each wait varies by about 10%, the countdown shows in the corner of the page, and the extension acts human on the page with gentle clicks. These are on for everyone now. “Tell me when a new version is out” is on by default.</li>
+          <li><strong>Tabs come back after a restart.</strong> Start a tab and the extension remembers its page address and settings, on your computer only. After a crash, a reboot or a browser restart the tabs open again and refresh by themselves. Pressing Stop, or closing just that tab, forgets it. A failed reload no longer ends a tab, a stalled tab is restarted, and you hear about it on your Telegram bot. The new Restarts section in Advanced controls all of this.</li>
+          <li><strong>Reviews.</strong> The extension asks for a rating three days after you first use it (right after this update, if you already use it). Reviews show in a Reviews tab in the extension and on this website, with a short name made from the reviewer’s email, never the address.</li>
+          <li><strong>The daily install report has no switch.</strong> Every copy reports once a day: a random install ID and the version number, plus the account it belongs to if you are logged in. The old tick box is gone. The privacy answers below say exactly what is sent and what never is.</li>
+          <li><strong>Fixed:</strong> two tabs refreshing at the very same moment could occasionally erase each other’s entry, and a tab you had just stopped could come back. They are queued one at a time now.</li>
+        </ul>
+      </article>
+
+      <article class="rel__item">
+        <div class="rel__head">
+          <span class="rel__ver">2.5.5</span>
         </div>
         <ul class="rel__list">
           <li><strong>It tells you when a new version is out.</strong> Once a day the extension looks for a newer version. If there is one you get a desktop notification and, if you connected your own Telegram bot, a message there too (once per version). Account holders can also get an update email, with an unsubscribe link in every one. A tick box in the popup turns the alert off.</li>
@@ -478,7 +498,7 @@
       </details>
       <details>
         <summary>How do I know when there's a new version?</summary>
-        <p>Open the popup and click <strong>Check for updates</strong> at the bottom — it compares the version you're running against the latest one published here and tells you either way. Unpacked extensions can't auto-update themselves, so nothing is ever installed behind your back; the button just tells you when it's worth grabbing the new zip.</p>
+        <p>Open the popup and click <strong>Check for updates</strong> at the bottom — it compares the version you're running against the latest one published here and tells you either way. Once a day the extension also looks by itself and tells you with a desktop notice, and with a message to your Telegram bot if you connected one; a switch in Advanced settings turns that off. Unpacked extensions can't auto-update themselves, so nothing is ever installed behind your back; the alert just tells you when it's worth grabbing the new zip.</p>
       </details>
       <details>
         <summary>How do I update without losing my settings?</summary>
@@ -489,12 +509,20 @@
         <p>Yes. The popup is just the control panel. Timers live in the extension's background worker, so you can close the popup and even switch tabs freely.</p>
       </details>
       <details>
+        <summary>What happens if the browser restarts or the computer reboots?</summary>
+        <p>Your tabs come back. When you start a tab, the extension saves its page address, interval, name and settings on your computer (they are never synced and never sent anywhere). After a crash, a reboot, a browser restart or an update, it matches the pages the browser restored by their address and starts refreshing them again, and about a minute later it opens any page the browser did not bring back. Pressing Stop, or closing just that tab, forgets it, so it does not return. Closing a whole window or quitting the browser keeps it. If a refresh fails or stalls you get a message on your Telegram bot, if you connected one. A reload that fails does not end the tab; it tries again in a few seconds. What it cannot do: start the browser itself. On a server, start the browser with the system, and use “continue where you left off” so your logins survive. A switch for each part lives in the Restarts section of Advanced settings.</p>
+      </details>
+      <details>
+        <summary>Where are the settings, and why is there no switch for hard refresh?</summary>
+        <p>The popup keeps only what you touch every day: the interval, an account name and Start. Press <strong>Advanced settings</strong> at the bottom to open the rest on its own page: the random range, the time windows, alerts and Telegram, restarts, update alerts and Reset. A few options have no switch because they are always on: every reload skips the cache, each wait varies by about 10%, the countdown shows in the corner of the page, and the extension acts human on the page with gentle clicks. Nothing needs setting up for any of them.</p>
+      </details>
+      <details>
         <summary>Can I refresh faster than every 30 seconds?</summary>
         <p>Yes. Chrome's alarm system has a 30-second floor, so anything shorter (like the 5s and 15s presets) is driven by a chained timer instead — 5 seconds really means 5 seconds.</p>
       </details>
       <details>
         <summary>What time zone does the schedule follow?</summary>
-        <p>Its own, never your computer's. Pick one of seven US zones in the popup — Eastern is the default. The popup shows the live time in that zone, so you can see exactly what it's working from. Daylight saving changes are handled for you. If you use an account, the time zone stays on each computer and is not synced.</p>
+        <p>Its own, never your computer's. Pick one of seven US zones in Advanced settings — Eastern is the default. The popup shows the live time in that zone, so you can see exactly what it's working from. Daylight saving changes are handled for you. If you use an account, the time zone stays on each computer and is not synced.</p>
       </details>
       <details>
         <summary>What happens between my time windows?</summary>
@@ -506,7 +534,7 @@
       </details>
       <details>
         <summary>How do I connect Telegram?</summary>
-        <p>In Telegram, message @BotFather, send /newbot and copy the token it gives you. In the popup, tick “Alert me when it needs a human touch”, open the Telegram section and paste the token. Then send your new bot any message in Telegram (bots can’t message you first), press Detect chat ID, and press Save. A confirmation arrives in Telegram. It takes about two minutes.</p>
+        <p>In Telegram, message @BotFather, send /newbot and copy the token it gives you. In Advanced settings, open Alerts, switch on “Alert me when it needs a human touch”, open the Telegram section and paste the token. Then send your new bot any message in Telegram (bots can’t message you first), press Detect chat ID, and press Save. A confirmation arrives in Telegram. It takes about two minutes.</p>
       </details>
       <details>
         <summary>Is my Telegram bot token safe?</summary>
@@ -514,15 +542,15 @@
       </details>
       <details>
         <summary>Why did my tab pause and show a red “!”?</summary>
-        <p>When a tab needs a human it pauses on purpose, because reloading a captcha would reset it while you’re solving it. The popup says why. Fix the page and it carries on by itself a few seconds after the problem is gone (you can also press Resume, or Ctrl+Shift+P, any time). If you’d rather it kept going, switch off “Pause this tab until it’s fixed”: it then alerts once and reminds you every 30 minutes.</p>
+        <p>When a tab needs a human it pauses on purpose, because reloading a captcha would reset it while you’re solving it. The popup says why. Fix the page and it carries on by itself a few seconds after the problem is gone (you can also press Resume, or Ctrl+Shift+P, any time). If you’d rather it kept going, switch off “Pause the tab until it is fixed” in Advanced settings: it then alerts once and reminds you every 30 minutes.</p>
       </details>
       <details>
         <summary>What does “Act human on the page” do, and can it beat bot protection?</summary>
-        <p>It is a switch in the popup, off by default. After each refresh, while the next one counts down, the extension plays a short visit inside the page: the mouse moves along curved, uneven paths, the page scrolls a little and returns to where it was, and about every other visit it clicks once on empty space. A second tick box turns the clicks off. It never clicks a link, button, field, image or menu, never while a dialog is open, and it stops the moment you touch the page yourself. It reads nothing from the page and sends nothing anywhere. What it helps with: sites that log you out when they see no activity, and simple activity checks. What it can’t do: beat real bot protection such as Cloudflare or captcha systems. Browsers mark events made by an extension as not coming from a real device, and those systems look at far more than the mouse. If a captcha or block page does appear, Auto Refresh leaves the page alone, pauses, and alerts you so you can handle it.</p>
+        <p>It is always on, with no switch. After each refresh, while the next one counts down, the extension plays a short visit inside the page: the mouse moves along curved, uneven paths, the page scrolls a little and returns to where it was, and about every other visit it clicks once on empty space. It never clicks a link, button, field, image or menu, never while a dialog is open, and it stops the moment you touch the page yourself. It reads nothing from the page and sends nothing anywhere. What it helps with: sites that log you out when they see no activity, and simple activity checks. What it can’t do: beat real bot protection such as Cloudflare or captcha systems. Browsers mark events made by an extension as not coming from a real device, and those systems look at far more than the mouse. If a captcha or block page does appear, Auto Refresh leaves the page alone, pauses, and alerts you so you can handle it.</p>
       </details>
       <details>
         <summary>Do I need an account?</summary>
-        <p>No. The account is optional and only exists to sync your settings between computers. Skip it and Auto Refresh works exactly as before, and nothing is sent to the account server.</p>
+        <p>No. The account is optional and only exists to sync your settings between computers. Skip it and Auto Refresh works the same. Without an account, the only thing that tells our server about your copy is the daily install report (a random install ID and the version number, nothing else), plus a review if you choose to write one.</p>
       </details>
       <details>
         <summary>How does syncing work?</summary>
@@ -530,7 +558,7 @@
       </details>
       <details>
         <summary>What does an account store, and how do I delete it?</summary>
-        <p>Your email, a scrambled (salted and hashed) copy of your password, and your saved settings. Never the pages you refresh, their addresses or their contents. To delete it, open the Account tab, choose Delete my account and confirm with your password. The account and its stored settings are removed; the settings on your computer stay.</p>
+        <p>Your email, a scrambled (salted and hashed) copy of your password, and your saved settings. While you are logged in, each computer’s daily install report also names your account, so the owner can see which accounts use the extension and on how many computers: the random install ID, the version and when it was last seen. Never the pages you refresh, their addresses or their contents. To delete it, open the Account tab, choose Delete my account and confirm with your password. The account, its stored settings and its reviews are removed, your computers are no longer linked to it, and the settings on your computer stay.</p>
       </details>
       <details>
         <summary>I forgot my password. Can I reset it?</summary>
@@ -538,11 +566,15 @@
       </details>
       <details>
         <summary>Does it collect any of my data?</summary>
-        <p>Not by default. Your intervals and schedules are saved in Chrome's local storage on your own machine, and nothing about the pages you refresh is tracked. Once a day the extension checks for a new version and sends an anonymous install count (a random install ID and the version number, never your email, settings or pages) so the developer can count how many people use it; two tick boxes in the popup switch these off. Beyond that, the extension only goes online when you set something up or start it yourself: “Check for updates” downloads a small public file with the latest version number; a Lynch AI chat message is sent with a summary of your refresh settings so it can answer or make the change you asked for; if you choose to log in, your settings sync to your account (it stores your email, a scrambled copy of your password and your saved settings and, if you connected one, your Telegram bot connection, encrypted); and if you connect a Telegram bot, alerts go straight from your browser to Telegram and your own bot. The address and title of the page you're refreshing are never sent to us, and page contents are never sent anywhere. An alert shows your account name and the page's address (the site and path, never anything after a question mark). If you didn't type a name it uses the page's title. These go only to your own Telegram. Switch the two daily checks off and use none of those, and it never goes online.</p>
+        <p>Very little, and here is all of it. Your intervals and schedules are saved in Chrome's local storage on your own machine, and nothing about the pages you refresh is tracked. For each tab you start, the extension also keeps the page address, interval, name and settings on your computer, so the tab can come back after a restart. That stays on your computer: it is never synced and never sent anywhere. <strong>Once a day the extension tells our server that this copy exists.</strong> It sends a random install ID and the version number and, if you are logged in, the account the copy belongs to, so we know who uses it and on how many computers. That report has no switch. It never contains your settings, the pages you refresh, their addresses or their contents. The same daily visit also looks for a new version (a small public file); a switch in Advanced settings turns the new-version alert off. Beyond that, the extension only goes online when you set something up or start it yourself: a Lynch AI chat message is sent with a summary of your refresh settings so it can answer or make the change you asked for; if you choose to log in, your settings sync to your account (it stores your email, a scrambled copy of your password and your saved settings and, if you connected one, your Telegram bot connection, encrypted); if you write a review, its stars and text are sent and shown publicly with a short name made from your email, never the address itself; and if you connect a Telegram bot, alerts go straight from your browser to Telegram and your own bot. The address and title of the page you're refreshing are never sent to us, and page contents are never sent anywhere. An alert shows your account name and the page's address (the site and path, never anything after a question mark). If you didn't type a name it uses the page's title. These go only to your own Telegram. If you delete your account, your computers are no longer linked to it and your reviews are removed.</p>
       </details>
       <details>
         <summary>What happens when I close a watched tab?</summary>
-        <p>Its timer is removed automatically, so nothing is left running in the background.</p>
+        <p>Its timer is removed automatically, so nothing is left running in the background, and the extension forgets the tab, so it does not come back after a restart. (Closing a whole window, or quitting the browser, is different: those tabs are kept so they can come back.)</p>
+      </details>
+      <details>
+        <summary>How do reviews work?</summary>
+        <p>The extension asks for a rating, one to five stars and an optional comment, three days after you first use it, and right after the update if you already use it. Choose Maybe later and it asks again in a week; choose Don’t ask again and it never will. You can also write or change yours any time in the Reviews tab. Reviews appear in that tab and on this website with a short name made from the reviewer’s email, like “Ethan C.”, never the address; without an account they show as “Auto Refresh user”. One review per account or copy, up to 500 characters, no links.</p>
       </details>
     </div>
   </section>
@@ -572,7 +604,7 @@
   <div class="foot__brand"><strong>LYNCH</strong><em>DIGITANCE</em> <span>STUDIOS</span></div>
   <div class="foot__tag">Create • Capture • Elevate</div>
   <div class="foot__links"><a href="https://www.lynchdigitancestudios.workers.dev/" target="_blank" rel="noopener">Website</a><a href="https://discord.gg/aGBWVQfZsj" target="_blank" rel="noopener">Discord</a></div>
-  <div class="foot__meta">Auto Refresh v2.5.5 · Manifest V3</div>
+  <div class="foot__meta">Auto Refresh v2.6.0 · Manifest V3</div>
 </footer>
 
 <script src="app.js"></script>

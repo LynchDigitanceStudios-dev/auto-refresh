@@ -1,6 +1,6 @@
 {
-  "version": "2.5.5",
+  "version": "2.6.0",
   "downloadUrl": "https://autorefresh.lynchdigitancestudios.workers.dev/lynch-digitance-auto-refresh.zip",
-  "notes": "Counts installs anonymously (switch-off option), tells you when a new version is out, and unzips to one folder.",
+  "notes": "An Advanced settings page, seven default time windows, tabs that come back after a restart, and reviews. After updating from 2.5.5, start your running tabs once.",
   "notesUrl": "https://autorefresh.lynchdigitancestudios.workers.dev/#update"
 }

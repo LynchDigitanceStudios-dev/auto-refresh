@@ -124,12 +124,12 @@ async function arm(tabId, job) {
   if (job.pageTimer) syncOverlay(Number(tabId), job);
 }
 
-/* ---------- on-page timer (optional) ---------- */
+/* ---------- on-page timer ---------- */
 
 /* Runs inside the page. Must be self-contained: it is serialised and injected.
    A closed shadow root keeps the site's CSS from restyling it, and
    pointer-events:none means it can never block a click. The page itself can
-   still see the element exists — that is why this is opt-in. */
+   still see that the element exists. */
 function mountOverlay(state) {
   const KEY = '__lynchAutoRefreshTimer';
   const prev = window[KEY];
@@ -409,9 +409,9 @@ async function checkHumanClear(tabId) {
   }
 }
 
-/* ---------- act human on the page (optional) ----------
+/* ---------- act human on the page ----------
  *
- * With "Act human on the page" on, each reload is followed by one short visit run
+ * Each reload is followed by one short visit run
  * inside the tab (act.js): pointer moves, a little scrolling, sometimes a click on
  * empty space. It plays while the next refresh counts down, never uses more than
  * ACT_SHARE of that wait, and is skipped when the wait is too short to look natural.
