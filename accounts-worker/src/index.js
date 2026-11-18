@@ -268,6 +268,89 @@ async function saveTelegram(env, userId, tg) {
   return row.updated_at;
 }
 
+/* ---------- the owner's own Telegram chat, for announcements posted from the dashboard ----------
+   One bot and one channel, group or chat, connected from the owner dashboard. Stored like the users' bots:
+   encrypted before it reaches D1 (AES-256-GCM, key from the PEPPER secret with its own salt and purpose), and the
+   token is never sent back to the browser. TG_API_BASE exists only so tests can use a stand-in for Telegram. */
+const TG_CHAT_RE = /^(-?\d{5,20}|@[A-Za-z][A-Za-z0-9_]{4,31})$/;
+const TG_MAX = 4000;           // Telegram allows 4,096; this leaves room for how it counts emoji
+const TG_COOLDOWN_MS = 5000;   // a double click must not post twice
+
+function tgFriendly(status, desc) {
+  const d = String(desc || "").replace(/\d{6,12}:[A-Za-z0-9_-]{30,60}/g, "[token]");
+  if (status === 401 || status === 404 || /unauthorized/i.test(d)) return "Telegram does not accept that bot token. Copy it again from @BotFather.";
+  if (/chat not found/i.test(d)) return "Telegram can't find that chat. Add your bot to it first, and check the chat.";
+  if (/not enough rights|no rights|administrator rights|write_forbidden|not a member|was kicked|was blocked|forbidden/i.test(d)) return "Your bot is not allowed to post there. Make it an administrator of the channel (or a member of the group).";
+  if (status === 409 || /conflict/i.test(d)) return "This bot has a webhook set, so its chats can't be listed. Type the chat instead.";
+  if (status === 429) return "Telegram says to slow down. Try again in a minute.";
+  if (/too long/i.test(d)) return "That message is too long for Telegram.";
+  return "Telegram refused it: " + d.slice(0, 120);
+}
+
+async function tgCall(env, token, method, params) {
+  const base = (env.TG_API_BASE || "https://api.telegram.org").replace(/\/+$/, "");
+  let res = null, data = null;
+  try {
+    res = await fetch(base + "/bot" + token + "/" + method, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(params || {}),
+    });
+    data = await res.json();
+  } catch {
+    // The error's own text can contain the address, and the address contains the token: say nothing about it.
+    if (!res) throw new HttpError(502, "Could not reach Telegram. Try again in a moment.");
+  }
+  if (!data || data.ok !== true) throw new HttpError(res && res.status === 429 ? 429 : 400, tgFriendly(res ? res.status : 0, data && data.description));
+  return data.result;
+}
+
+async function adminTgKey(env) {
+  const base = await crypto.subtle.importKey("raw", enc.encode(env.PEPPER), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "HKDF", hash: "SHA-256", salt: enc.encode("autorefresh-admin-telegram"), info: enc.encode("admin-telegram-v1") },
+    base,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function readAdminTg(env) {
+  const row = await env.DB.prepare("SELECT data, last_post_at AS lastPostAt, posts FROM admin_telegram WHERE id = 1").first();
+  if (!row) return null;
+  try {
+    const [iv, ct] = row.data.split(".").map(fromB64);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv, additionalData: enc.encode("admin-tg") }, await adminTgKey(env), ct);
+    const c = JSON.parse(new TextDecoder().decode(plain));
+    if (!TOKEN_RE.test(c.token || "") || !TG_CHAT_RE.test(String(c.chat || ""))) return null;
+    return { token: c.token, chat: String(c.chat), bot: c.bot || "", title: c.title || "", type: c.type || "", lastPostAt: row.lastPostAt || 0, posts: row.posts || 0 };
+  } catch {
+    console.error("admin telegram decrypt failed");
+    throw new HttpError(500, "Something went wrong. Please try again.");
+  }
+}
+
+async function writeAdminTg(env, cfg) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: enc.encode("admin-tg") },
+    await adminTgKey(env),
+    enc.encode(JSON.stringify({ token: cfg.token, chat: cfg.chat, bot: cfg.bot, title: cfg.title, type: cfg.type }))
+  ));
+  await env.DB.prepare(
+    "INSERT INTO admin_telegram (id, data, updated_at, last_post_at, posts) VALUES (1, ?, ?, NULL, 0) " +
+    "ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at, last_post_at = NULL, posts = 0"
+  ).bind(toB64(iv) + "." + toB64(ct), Date.now()).run();
+}
+
+// what the dashboard may know about the connection (never the token)
+async function tgStatus(env) {
+  try {
+    const cfg = await readAdminTg(env);
+    if (!cfg) return { connected: false };
+    return { connected: true, bot: cfg.bot, title: cfg.title, type: cfg.type, chat: cfg.chat, lastPostAt: cfg.lastPostAt || null, posts: cfg.posts };
+  } catch { return { connected: false, broken: true }; }
+}
+
 /* Exact per-account protection. The Cloudflare limiter below is approximate and
    can miss slow, steady guessing; this counts every wrong password in D1. */
 async function lockedUntil(env, email) {
@@ -642,6 +725,84 @@ export default {
         return json({ sent: totals.sent, failed: totals.failed, remaining }, 200, cors);
       }
 
+      /* ---------- owner-only: post an update to the owner's own Telegram channel or group ---------- */
+      if (method === "GET" && path === "/admin/telegram") {
+        await adminCheck();
+        return json(await tgStatus(env), 200, cors);
+      }
+
+      // lists the chats a bot can see (a channel, group or private chat where something was posted after the bot joined)
+      if (method === "POST" && path === "/admin/telegram/detect") {
+        await adminCheck(true);
+        const b = await readJson(request);
+        const token = typeof b.token === "string" ? b.token.trim() : "";
+        if (!TOKEN_RE.test(token)) throw new HttpError(400, "That does not look like a bot token. It looks like 123456789:AAH... and comes from @BotFather.");
+        const me = await tgCall(env, token, "getMe");
+        const ups = await tgCall(env, token, "getUpdates", { limit: 100, timeout: 0, allowed_updates: ["message", "channel_post", "my_chat_member"] });
+        const seen = new Map();
+        for (const u of Array.isArray(ups) ? ups : []) {
+          const c = ((u && (u.message || u.channel_post || u.my_chat_member)) || {}).chat;
+          if (!c || typeof c.id !== "number" || seen.has(c.id)) continue;
+          const title = String(c.title || [c.first_name, c.last_name].filter(Boolean).join(" ") || (c.username ? "@" + c.username : "")).slice(0, 80);
+          seen.set(c.id, { id: String(c.id), type: String(c.type || "").slice(0, 12), title });
+        }
+        return json({ bot: me && me.username ? "@" + me.username : "", chats: [...seen.values()].slice(-10).reverse() }, 200, cors);
+      }
+
+      if (method === "PUT" && path === "/admin/telegram") {
+        await adminCheck(true);
+        const b = await readJson(request);
+        const token = typeof b.token === "string" ? b.token.trim() : "";
+        let chat = typeof b.chat === "string" || typeof b.chat === "number" ? String(b.chat).trim() : "";
+        const link = /^https?:\/\/t\.me\/([A-Za-z][A-Za-z0-9_]{4,31})\/?$/.exec(chat);
+        if (link) chat = "@" + link[1];
+        if (!TOKEN_RE.test(token)) throw new HttpError(400, "That does not look like a bot token. It looks like 123456789:AAH... and comes from @BotFather.");
+        if (!TG_CHAT_RE.test(chat)) throw new HttpError(400, "The chat is a channel name like @yourchannel, or a number like -1001234567890.");
+        const me = await tgCall(env, token, "getMe");
+        if (!me || !me.is_bot) throw new HttpError(400, "That token does not belong to a bot.");
+        const info = await tgCall(env, token, "getChat", { chat_id: chat });
+        if (info.type !== "private") { // a chat with one person needs no check; a channel or group must let the bot post
+          let m;
+          try { m = await tgCall(env, token, "getChatMember", { chat_id: info.id, user_id: me.id }); }
+          catch (e) { throw new HttpError(400, "Your bot is not in that chat yet. Add it first (as an administrator for a channel)."); }
+          const st = m && m.status;
+          const canPost = info.type === "channel"
+            ? st === "creator" || (st === "administrator" && m.can_post_messages !== false)
+            : st === "creator" || st === "administrator" || st === "member" || (st === "restricted" && m.can_send_messages !== false);
+          if (!canPost) {
+            throw new HttpError(400, info.type === "channel"
+              ? (st === "administrator" ? "Your bot is in that channel but cannot post. Give it the right to post messages." : "Your bot is not an administrator of that channel yet. Make it one, with the right to post messages.")
+              : "Your bot is not allowed to post in that group.");
+          }
+        }
+        const cfg = {
+          token, chat: String(info.id), bot: me.username ? "@" + me.username : "", type: String(info.type || "").slice(0, 12),
+          title: String(info.title || [info.first_name, info.last_name].filter(Boolean).join(" ") || (info.username ? "@" + info.username : "")).slice(0, 80),
+        };
+        await writeAdminTg(env, cfg);
+        return json({ connected: true, bot: cfg.bot, title: cfg.title, type: cfg.type, chat: cfg.chat, lastPostAt: null, posts: 0 }, 200, cors);
+      }
+
+      if (method === "DELETE" && path === "/admin/telegram") {
+        await adminCheck(true);
+        await env.DB.prepare("DELETE FROM admin_telegram WHERE id = 1").run();
+        return json({ ok: true }, 200, cors);
+      }
+
+      if (method === "POST" && path === "/admin/telegram/send") {
+        await adminCheck(true);
+        const b = await readJson(request);
+        const text = typeof b.text === "string" ? b.text.trim() : "";
+        if (!text) throw new HttpError(400, "Write a message first.");
+        if (text.length > TG_MAX) throw new HttpError(400, "That message is too long for Telegram (" + TG_MAX.toLocaleString("en-US") + " characters at most).");
+        const cfg = await readAdminTg(env);
+        if (!cfg) throw new HttpError(404, "No Telegram chat is connected yet.");
+        if (Date.now() - (cfg.lastPostAt || 0) < TG_COOLDOWN_MS) throw new HttpError(429, "That was just posted. Wait a few seconds.");
+        const sent = await tgCall(env, cfg.token, "sendMessage", { chat_id: cfg.chat, text });
+        await env.DB.prepare("UPDATE admin_telegram SET last_post_at = ?, posts = posts + 1 WHERE id = 1").bind(Date.now()).run();
+        return json({ ok: true, title: cfg.title, messageId: sent && sent.message_id ? sent.message_id : null }, 200, cors);
+      }
+
       /* ---------- owner-only: every account (never passwords, tokens or Telegram secrets) ---------- */
       if (method === "GET" && path === "/admin/users") {
         await adminCheck();
@@ -709,6 +870,7 @@ export default {
         };
         const out = json({
           installs,
+          telegram: await tgStatus(env), // the dashboard's Telegram box needs no request of its own on load
           emailUsers: users.filter((u) => u.updates).length,
           stats: {
             users: users.length,

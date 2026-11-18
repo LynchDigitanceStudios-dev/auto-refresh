@@ -140,6 +140,36 @@
       </div>
     </div>
 
+    <div class="panel" id="tgPanel">
+      <h3>Post an update on Telegram</h3>
+      <div id="tgSetup" hidden>
+        <p class="muted" style="margin:0 0 12px">Post the same news in your own Telegram channel or group, in one click. One-time setup: <b>1.</b> In Telegram, message <b>@BotFather</b>, send <b>/newbot</b> and copy the token it gives you. <b>2.</b> Add that bot to your channel as an administrator who can post (or add it to your group). <b>3.</b> Paste the token below. To pick the chat, post anything there and press <b>Find my chats</b>, or type the channel name like <b>@yourchannel</b>. To try it first, send your bot a message in a private chat and connect that.</p>
+        <input type="password" id="tgToken" autocomplete="off" placeholder="Bot token from @BotFather" aria-label="Bot token">
+        <div class="bar-tools" style="margin-bottom:10px;justify-content:flex-start">
+          <button class="btn" id="tgFind" type="button">Find my chats</button>
+          <select id="tgPick" hidden aria-label="Chats your bot can see"></select>
+        </div>
+        <input type="text" id="tgChat" autocomplete="off" placeholder="Chat: @yourchannel, or a number like -1001234567890" aria-label="Chat">
+        <div class="bar-tools" style="margin:0">
+          <span class="muted" id="tgSetMsg"></span>
+          <button class="btn btn--go" id="tgSave" type="button">Connect</button>
+        </div>
+      </div>
+      <div id="tgReady" hidden>
+        <p class="muted" style="margin:0 0 12px" id="tgWho"></p>
+        <textarea id="tgText" maxlength="4000" style="min-height:220px" placeholder="Write the Telegram message. Plain text works best, and a link on its own line shows a preview."></textarea>
+        <div class="bar-tools" style="margin:0">
+          <span class="muted" id="tgStatus"></span>
+          <div>
+            <button class="btn" id="tgFill" type="button">Use the email text</button>
+            <button class="btn btn--go" id="tgSend" type="button">Post to Telegram</button>
+            <button class="btn btn--del" id="tgOff" type="button">Disconnect</button>
+          </div>
+        </div>
+      </div>
+      <p class="foot">The bot token is stored encrypted on the server and is never shown again. A post goes from the server straight to Telegram and cannot be taken back from here.</p>
+    </div>
+
     <div class="panel">
       <div class="bar-tools">
         <input type="search" id="q" placeholder="Search by email" aria-label="Search by email">
@@ -289,6 +319,7 @@
   function render(data) {
     users = data.users;
     if (data.installs) renderInstalls(data.installs);
+    if (data.telegram) renderTelegram(data.telegram);
     $('aSend').textContent = 'Send to everyone (' + (data.emailUsers == null ? users.length : data.emailUsers) + ')';
     emailUsers = data.emailUsers == null ? users.length : data.emailUsers;
     var s = data.stats, k = $('kpis'); k.textContent = '';
@@ -448,6 +479,104 @@
     }
     if (left === 0) say('Done. Sent ' + sent + ' of ' + total + (failed ? ', ' + failed + ' failed (Gmail allows about 100 emails a day).' : '.'));
     $('aSend').disabled = $('aTest').disabled = false;
+  });
+
+  /* ---------- Telegram: post an update to the owner's own channel or group ---------- */
+  var tgConn = null;
+  function tgSay(id, text, bad) { var e = $(id); e.textContent = text; e.style.color = bad ? '#b3261e' : ''; }
+  async function tgReq(method, path, body) {
+    var o = { method: method, headers: { 'X-Admin': '1' }, credentials: 'same-origin', cache: 'no-store' };
+    if (body) { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(body); }
+    var r = await fetch(path, o), d = {};
+    try { d = await r.json(); } catch (e) {}
+    return { ok: r.ok, status: r.status, data: d };
+  }
+  function renderTelegram(c) {
+    tgConn = c && c.connected ? c : null;
+    $('tgSetup').hidden = !!tgConn; $('tgReady').hidden = !tgConn;
+    if (tgConn) {
+      var kind = { channel: 'channel', supergroup: 'group', group: 'group', 'private': 'private chat' }[tgConn.type] || 'chat';
+      $('tgWho').textContent = 'Connected: ' + (tgConn.title || 'your chat') + ' (' + kind + ') through ' + (tgConn.bot || 'your bot') + '. ' +
+        (tgConn.lastPostAt ? 'Last post ' + ago(tgConn.lastPostAt) + ', ' + tgConn.posts + ' in all.' : 'Nothing posted yet.');
+    } else if (c && c.broken) {
+      tgSay('tgSetMsg', 'The saved connection could not be read. Connect again.', true);
+    }
+  }
+  async function loadTelegram() {
+    try {
+      var r = await fetch('/admin/telegram', { cache: 'no-store', credentials: 'same-origin' });
+      if (r.ok) renderTelegram(await r.json());
+    } catch (e) { /* the rest of the dashboard still works */ }
+  }
+  // the email text, turned into a Telegram post: bullets and link buttons become plain text
+  function telegramFromEmail(subject, body) {
+    var lines = String(body || '').replace(/\r/g, '').split('\n');
+    if (lines.length && /^(hi|hello|hey)[ ,!.]*$/i.test(lines[0].trim())) { lines.shift(); while (lines.length && !lines[0].trim()) lines.shift(); }
+    var text = lines.map(function (l) {
+      return l.replace(/^\s*[-*]\s+/, '• ').replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '$1: $2');
+    }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    return (subject ? '🔄 ' + subject.trim() + '\n\n' : '') + text;
+  }
+
+  $('tgFind').addEventListener('click', async function () {
+    var token = $('tgToken').value.trim();
+    if (!token) return tgSay('tgSetMsg', 'Paste your bot token first.', true);
+    $('tgFind').disabled = true; tgSay('tgSetMsg', 'Looking…');
+    var r = await tgReq('POST', '/admin/telegram/detect', { token: token });
+    $('tgFind').disabled = false;
+    var pick = $('tgPick'); pick.textContent = ''; pick.hidden = true;
+    if (!r.ok) return tgSay('tgSetMsg', r.data.error || 'Could not look (' + r.status + ').', true);
+    var chats = r.data.chats || [];
+    if (!chats.length) return tgSay('tgSetMsg', 'No chats yet. Add ' + (r.data.bot || 'the bot') + ' to your channel or group, post something there, then press Find my chats again.', true);
+    var first = document.createElement('option'); first.value = ''; first.textContent = 'Pick one of ' + chats.length + '…'; pick.appendChild(first);
+    chats.forEach(function (c) {
+      var o = document.createElement('option'); o.value = c.id; o.textContent = (c.title || 'Untitled') + ' (' + (c.type || 'chat') + ')';
+      pick.appendChild(o);
+    });
+    pick.hidden = false;
+    if (chats.length === 1) { pick.value = chats[0].id; $('tgChat').value = chats[0].id; }
+    tgSay('tgSetMsg', 'Found ' + chats.length + (chats.length === 1 ? ' chat.' : ' chats. Pick one.'));
+  });
+  $('tgPick').addEventListener('change', function () { if ($('tgPick').value) $('tgChat').value = $('tgPick').value; });
+
+  $('tgSave').addEventListener('click', async function () {
+    var token = $('tgToken').value.trim(), chat = $('tgChat').value.trim();
+    if (!token || !chat) return tgSay('tgSetMsg', 'Paste the bot token and choose the chat first.', true);
+    $('tgSave').disabled = true; tgSay('tgSetMsg', 'Checking with Telegram…');
+    var r = await tgReq('PUT', '/admin/telegram', { token: token, chat: chat });
+    $('tgSave').disabled = false;
+    if (!r.ok) return tgSay('tgSetMsg', r.data.error || 'Could not connect (' + r.status + ').', true);
+    $('tgToken').value = ''; $('tgChat').value = ''; $('tgPick').hidden = true; tgSay('tgSetMsg', '');
+    renderTelegram(r.data);
+  });
+
+  $('tgFill').addEventListener('click', function () {
+    var t = telegramFromEmail($('aSubject').value, $('aBody').value);
+    if (!t) return tgSay('tgStatus', 'Write the email above first, then this copies it here.', true);
+    $('tgText').value = t.slice(0, 4000); tgSay('tgStatus', 'Copied from the email. Change it as you like.');
+  });
+
+  $('tgSend').addEventListener('click', async function () {
+    var text = $('tgText').value.trim();
+    if (!text) return tgSay('tgStatus', 'Write a message first.', true);
+    if (!confirm('Post this on Telegram (' + (tgConn && tgConn.title ? tgConn.title : 'your chat') + ') now? It goes out at once and cannot be taken back from here.')) return;
+    $('tgSend').disabled = true; tgSay('tgStatus', 'Posting…');
+    var r = await tgReq('POST', '/admin/telegram/send', { text: text });
+    $('tgSend').disabled = false;
+    if (!r.ok) {
+      tgSay('tgStatus', r.status === 404 ? 'No chat is connected any more. Connect again.' : (r.data.error || 'Could not post (' + r.status + ').'), true);
+      if (r.status === 404) loadTelegram();
+      return;
+    }
+    tgSay('tgStatus', 'Posted to ' + (r.data.title || 'Telegram') + '.');
+    loadTelegram();
+  });
+
+  $('tgOff').addEventListener('click', async function () {
+    if (!confirm('Disconnect this Telegram chat? You can connect it again with the bot token.')) return;
+    var r = await tgReq('DELETE', '/admin/telegram');
+    if (r.ok) { renderTelegram(null); tgSay('tgSetMsg', 'Disconnected.'); }
+    else tgSay('tgStatus', r.data.error || 'Could not disconnect (' + r.status + ').', true);
   });
 
   window.__render = render; // test hook: the page can be fed data without a key

@@ -96,3 +96,13 @@ CREATE TABLE IF NOT EXISTS reviews (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_user ON reviews(user_id) WHERE user_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_install ON reviews(install_id) WHERE install_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_reviews_shown ON reviews(hidden, created_at);
+
+-- The owner's own Telegram chat for announcements posted from the dashboard (one row, id = 1).
+-- "data" is encrypted (bot token + chat): AES-GCM, key derived from the PEPPER secret. The token is never sent back to the browser.
+CREATE TABLE IF NOT EXISTS admin_telegram (
+  id           INTEGER PRIMARY KEY CHECK (id = 1),
+  data         TEXT    NOT NULL,
+  updated_at   INTEGER NOT NULL,
+  last_post_at INTEGER,
+  posts        INTEGER NOT NULL DEFAULT 0
+);
